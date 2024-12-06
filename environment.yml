@@ -1,0 +1,22 @@
+name: migraine_weather
+channels:
+  - conda-forge
+dependencies:
+  - python=3.10
+  - black
+  - flake8
+  - isort
+  - pip
+  - typer
+  - loguru
+  - tqdm
+  - pandas
+  - meteostat
+  - datetime
+  - pycountry
+  - geopandas
+  - matplotlib
+  - pip:
+    - python-dotenv
+    - mkdocs
+    - -e .
