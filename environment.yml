@@ -11,12 +11,15 @@ dependencies:
   - loguru
   - tqdm
   - pandas
-  - meteostat
-  - datetime
+  - numpy
   - pycountry
   - geopandas
   - matplotlib
+  - jupyter
   - pip:
+    - meteostat
+    - datetime
     - python-dotenv
     - mkdocs
+    - cartopy
     - -e .
