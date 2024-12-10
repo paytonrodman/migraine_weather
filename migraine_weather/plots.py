@@ -5,6 +5,8 @@ from loguru import logger
 from tqdm import tqdm
 
 from migraine_weather.config import FIGURES_DIR, PROCESSED_DATA_DIR
+from migraine_weather import make_maps
+import pycountry
 
 app = typer.Typer()
 
@@ -12,15 +14,17 @@ app = typer.Typer()
 @app.command()
 def main(
     # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    output_path: Path = FIGURES_DIR / "plot.png",
+    input_path: Path = PROCESSED_DATA_DIR,
+    output_path: Path = FIGURES_DIR,
     # -----------------------------------------
 ):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
     logger.info("Generating plot from data...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
+
+    #make_maps.plot_country('United States of America', input_path, output_path)
+    #make_maps.plot_world(input_path, output_path)
+
+    make_maps.plot_region('Africa', input_path, output_path)
+
     logger.success("Plot generation complete.")
     # -----------------------------------------
 
