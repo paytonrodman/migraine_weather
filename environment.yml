@@ -22,4 +22,5 @@ dependencies:
     - python-dotenv
     - mkdocs
     - cartopy
+    - pytest
     - -e .
