@@ -35,9 +35,9 @@ def plot_region(region, input_path, output_path):
     im = plot_world(fig, ax, input_path)
 
     if region != 'World':
-        im.set_sizes([30])
+        im.set_sizes([5])
     else:
-        im.set_sizes([10])
+        im.set_sizes([1])
 
     # restrict plot bounds for region of interest
     ax.set_extent([lon_range[0], lon_range[1], lat_range[0], lat_range[1]], crs=ccrs.PlateCarree())
@@ -66,14 +66,13 @@ def plot_world(fig, ax, input_path):
     from mpl_toolkits.axes_grid1 import make_axes_locatable
     import cartopy.crs as ccrs
     import cartopy.feature as cfeature
+    from cartopy.io.img_tiles import GoogleTiles
 
     # add map features
     ax.add_feature(cfeature.LAND, color='0.9')
     ax.add_feature(cfeature.OCEAN)
     ax.add_feature(cfeature.COASTLINE)
-    ax.add_feature(cfeature.BORDERS, color='grey')
-    #ax.add_feature(cfeature.LAKES, alpha=0.5)
-    #ax.add_feature(cfeature.RIVERS)
+    ax.add_feature(cfeature.BORDERS)
 
     # get list of all station data available
     appended_stations = get_all_stations(input_path)
@@ -118,7 +117,8 @@ def get_all_stations(input_path):
         fname = input_path / f'{cc}.csv'
         if os.path.isfile(fname):
             stations = pd.read_csv(fname)
-            appended_stations.append(stations)
+            if not stations.empty:
+                appended_stations.append(stations)
     appended_stations = pd.concat(appended_stations)
 
     return appended_stations
@@ -157,8 +157,5 @@ def get_lonlat(region):
     elif region == 'Oceania':
         lat_range = [-60, 30]
         lon_range = [110, 240]
-
-        #lat_range = [110, 160]
-        #lon_range = [-50, -10]
 
     return lat_range, lon_range

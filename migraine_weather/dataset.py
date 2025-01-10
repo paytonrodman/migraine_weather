@@ -7,7 +7,7 @@ from tqdm import tqdm
 import glob
 
 from migraine_weather.config import RAW_DATA_DIR, PROCESSED_DATA_DIR
-from migraine_weather.data import make_dataset
+from migraine_weather import make_dataset
 from datetime import datetime
 
 app = typer.Typer()
@@ -21,9 +21,15 @@ def main(
     # ----------------------------------------------
 ):
 
+    # get list of valid country codes
     country_codes = make_dataset.get_country_codes()
+    # get list of country codes from existing datafiles
     data_files = [d.split('/')[-1][:2] for d in glob.glob(str(output_path / '*'))]
 
+    country_codes = [c for c in country_codes if c[0] in ['A','B','C']]
+    #country_codes = [c for c in country_codes if c[0:2] in ['RO','RU','RS','RW','GS','PM']]
+
+    # date range to analyse
     start = datetime(2010, 1, 1, 0, 0, 0)
     end = datetime(2020, 12, 31, 23, 59, 59)
 
