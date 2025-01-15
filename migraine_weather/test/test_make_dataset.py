@@ -5,7 +5,7 @@ import pytest
 import sys
 sys.path.append("../..") # Adds higher directory to python modules path.
 
-from migraine_weather.data import make_dataset
+from migraine_weather import make_dataset
 import pandas as pd
 from datetime import datetime
 import meteostat
@@ -30,6 +30,20 @@ def test_check_file_exists():
     assert make_dataset.check_file_exists(test_cc_notexists, test_data_files_regex, overwrite_flag=0) == 0
     assert make_dataset.check_file_exists(test_cc_notexists, test_data_files_regex, overwrite_flag=1) == 0
 
+def test_get_eligible_stations():
+    """
+    Function to test get_eligible_stations from migraine_weather.data.make_dataset
+    """
+    start, end = get_test_time()
+    freq = 'Hourly'
+
+    eligible_stations = make_dataset.get_eligible_stations(freq, start, end)
+
+    # test that all start and end times encapsulate the correct range
+    test_times = (eligible_stations[freq.lower()+'_start'].dt.year<=start.year) & (eligible_stations[freq.lower()+'_end'].dt.year>=end.year).all()
+    assert test_times.all()
+    # test that the output is of type pd.DataFrame
+    assert isinstance(eligible_stations, pd.DataFrame)
 
 def test_remove_outliers():
     """
@@ -56,23 +70,6 @@ def test_get_variation_frac():
 
     # test that output is of type float
     assert isinstance(frac_var_test, float)
-
-def test_select_on_hours():
-    """
-    Function to test select_on_hours from migraine_weather.data.make_dataset
-    """
-    start, end = get_test_time()
-    test_stations_input = get_test_stations()
-
-    test_stations_output = make_dataset.select_on_hours(test_stations_input, start, end)
-
-    # test that all start and end times encapsulate the correct range
-    test_times = (test_stations_output['hourly_start'].dt.year<=start.year) & (test_stations_output['hourly_end'].dt.year>=end.year).all()
-    assert test_times.all()
-    # test that the function output is of type pd.DataFrame
-    assert isinstance(test_stations_output, pd.DataFrame)
-    # test that the output retains all the same columns as the input
-    assert set(test_stations_input.columns).issubset(test_stations_output.columns)
 
 def test_get_country_codes():
     """
