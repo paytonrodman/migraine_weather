@@ -26,12 +26,31 @@ def check_file_exists(cc, data_files, overwrite_flag=0):
 
     return 0 if ((overwrite_flag) or (cc not in data_files)) else 1
 
-def make_dataset(cc, start, end):
+def get_eligible_stations(freq, start, end):
+    """
+    A function to determine if a file exists for a given country, or whether
+    it should be overwritten.
+
+    Args:
+        string freq: A string corresponding to data frequency neeed (e.g. daily, hourly).
+        datetime start: A datetime object. The start datetime for data analysis
+        datetime end: A datetime object. The end datetime for data analysis
+
+    Returns:
+        pd.DataFrame eligible_stations: A pandas dataframe object with all
+        eligible stations, grouped by country code.
+    """
+    eligible_stations = meteostat.Stations().inventory(freq, (start, end)).fetch() # get all stations with right hourly data, worldwide
+    eligible_stations = eligible_stations.groupby(by='country') # group stations by country
+    return eligible_stations
+
+def make_dataset(cc, cc_df, start, end):
     """
     Generate a cleaned dataset with yearly fractional variation in pressure.
 
     Args:
         string cc: An ISO 2 country code.
+        pd.DataFrame cc_df: A pandas dataframe containing eligible station information.
         datetime start: A datetime object. The start datetime for data analysis
         datetime end: A datetime object. The end datetime for data analysis
 
@@ -39,18 +58,15 @@ def make_dataset(cc, start, end):
         pd.DataFrame stations: A pandas DataFrame with added frac_var column
     """
 
-    stations = meteostat.Stations().region(cc).fetch()
-    stations = select_on_hours(stations, start, end)
-
-    n_stations = len(stations)
+    n_stations = len(cc_df)
     if n_stations == 0:
         logger.warning(f'No suitable stations available for {cc}.')
 
     current_n = 0
     av_frac_var = []
-    for station_id in stations.index:
+    for station_id in cc_df.index:
         current_n += 1
-        station_name = stations[stations.index==station_id]['name'].iloc[0]
+        station_name = cc_df[cc_df.index==station_id]['name'].iloc[0]
         current_string = str((current_n/n_stations)*100)
         print(f'Checking station {station_name}, {cc}')
 
@@ -61,7 +77,6 @@ def make_dataset(cc, start, end):
             except RemoteDisconnected:
                 logger.warning(f'Disconnected. Retrying download for {station_name}, {cc}.')
                 df = meteostat.Hourly(station_id, start, end, model=False).fetch()
-
 
         # if all pressure measurements are NaN, skip station
         if (df['pres'].isna().all()):
@@ -92,9 +107,9 @@ def make_dataset(cc, start, end):
         av_frac_var.append(frac_var_yearly)
 
     # Add fractional variation to dataframe and drop NaNs
-    stations.insert(0, "frac_var", av_frac_var)
-    stations = stations.drop(stations[stations['frac_var'].isna()].index)
-    return stations
+    cc_df.insert(0, "frac_var", av_frac_var)
+    cc_df = cc_df.drop(cc_df[cc_df['frac_var'].isna()].index)
+    return cc_df
 
 def remove_outliers(df):
     """
