@@ -30,13 +30,8 @@ def main(
     start = datetime(2010, 1, 1, 0, 0, 0)
     end = datetime(2020, 12, 31, 23, 59, 59)
 
-    import meteostat
-    from meteostat import Stations
-    import warnings
-
     eligible_stations = make_dataset.get_eligible_stations('hourly', start, end)
-    for cc, cc_group in eligible_stations: # loop through country groups
-        logger.info("Checking if processed data exists...")
+    for cc, cc_group in eligible_stations.groupby(by='country'): # loop through country groups
         file_exists = make_dataset.check_file_exists(cc, data_files, overwrite_flag=1)
 
         if not file_exists:

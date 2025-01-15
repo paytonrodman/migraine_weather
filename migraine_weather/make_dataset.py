@@ -38,10 +38,9 @@ def get_eligible_stations(freq, start, end):
 
     Returns:
         pd.DataFrame eligible_stations: A pandas dataframe object with all
-        eligible stations, grouped by country code.
+        eligible stations.
     """
-    eligible_stations = meteostat.Stations().inventory(freq, (start, end)).fetch() # get all stations with right hourly data, worldwide
-    eligible_stations = eligible_stations.groupby(by='country') # group stations by country
+    eligible_stations = meteostat.Stations().inventory(freq.lower(), (start, end)).fetch() # get all stations with right hourly data, worldwide
     return eligible_stations
 
 def make_dataset(cc, cc_df, start, end):
@@ -190,23 +189,6 @@ def get_variation_frac(df):
         frac_var_yearly = float('nan')
 
     return frac_var_yearly
-
-def select_on_hours(df, start, end):
-    """
-    Processes a dataframe df and returns only those entries with an hourly start
-    time and end time that encapsulates the range defined by start and end.
-
-    Args:
-        pd.DataFrame df: A pandas dataframe. Should contain the following columns:
-            - hourly_start
-            - hourly_end
-        datetime start: A datetime object. The start datetime for data analysis
-        datetime end: A datetime object. The end datetime for data analysis
-
-    Returns:
-        A modified dataframe.
-    """
-    return (df[(df['hourly_start'].dt.year<=start.year) & (df['hourly_end'].dt.year>=end.year)])
 
 def get_country_codes():
     """
