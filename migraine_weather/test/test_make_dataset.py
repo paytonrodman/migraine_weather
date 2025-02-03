@@ -14,7 +14,7 @@ import glob
 
 def test_check_file_exists():
     """
-    Function to test check_file_exists from migraine_weather.data.make_dataset
+    Function to test check_file_exists from migraine_weather.make_dataset
     """
     country_codes = make_dataset.get_country_codes() # get list of real country codes
     test_data_files = [i + '.csv' for i in country_codes] # make a mock list of data files
@@ -32,7 +32,7 @@ def test_check_file_exists():
 
 def test_get_eligible_stations():
     """
-    Function to test get_eligible_stations from migraine_weather.data.make_dataset
+    Function to test get_eligible_stations from migraine_weather.make_dataset
     """
     start, end = get_test_time()
     freq = 'Hourly'
@@ -47,7 +47,7 @@ def test_get_eligible_stations():
 
 def test_remove_outliers():
     """
-    Function to test remove_outliers from migraine_weather.data.make_dataset
+    Function to test remove_outliers from migraine_weather.make_dataset
     """
     test_data = get_test_data()
     original_columns = set(test_data.columns)
@@ -63,7 +63,7 @@ def test_remove_outliers():
 
 def test_get_variation_frac():
     """
-    Function to test get_variation_frac from migraine_weather.data.make_dataset
+    Function to test get_variation_frac from migraine_weather.make_dataset
     """
     test_data = get_test_data()
     frac_var_test = make_dataset.get_variation_frac(test_data)
@@ -73,7 +73,7 @@ def test_get_variation_frac():
 
 def test_get_country_codes():
     """
-    Function to test get_country_codes from migraine_weather.data.make_dataset
+    Function to test get_country_codes from migraine_weather.make_dataset
     """
     cc = make_dataset.get_country_codes()
     # test that output is of type list
