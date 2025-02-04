@@ -56,50 +56,37 @@ def make_dataset(cc, cc_df, start, end):
     Returns:
         pd.DataFrame stations: A pandas DataFrame with added frac_var column
     """
+    av_frac_var = []
 
     n_stations = len(cc_df)
     if n_stations == 0:
         logger.warning(f'No suitable stations available for {cc}.')
 
-    current_n = 0
-    av_frac_var = []
-    for station_id in cc_df.index:
-        current_n += 1
-        station_name = cc_df[cc_df.index==station_id]['name'].iloc[0]
-        current_string = str((current_n/n_stations)*100)
-        print(f'Checking station {station_name}, {cc}')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        df_country = meteostat.Hourly(cc_df, start, end, model=False).fetch()
 
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=FutureWarning)
-            try:
-                df = meteostat.Hourly(station_id, start, end, model=False).fetch()
-            except RemoteDisconnected:
-                logger.warning(f'Disconnected. Retrying download for {station_name}, {cc}.')
-                df = meteostat.Hourly(station_id, start, end, model=False).fetch()
+    # group by station ID
+    for station, station_df in df_country.groupby(by='station'):
+        # reindex to date only
+        station_df = station_df.reset_index(['station'])
 
-        # if all pressure measurements are NaN, skip station
-        if (df['pres'].isna().all()):
-            logger.warning(f'No pressure data for station {station_name}, {cc}.')
-            av_frac_var.append(float('nan'))
-            continue
+        # calculate the total completeness and daily completeness
+        completeness = 1 - (sum(station_df['pres'].isna())/len(station_df['pres'].isna()))
+        day_complete = station_df.groupby(pd.Grouper(freq='D')).count()['pres'].value_counts(normalize=True)
+        underreported_days = sum(day_complete[day_complete.index < 6])
 
-        # if >50% of pressure measurements are NaN, skip station
-        completeness = 1 - (sum(df['pres'].isna())/len(df['pres'].isna()))
         if completeness < 0.5:
-            logger.warning(f'Completeness below 50% for station {station_name}, {cc}.')
+            logger.warning(f'Completeness below 50% for station {station}, {cc}.')
             av_frac_var.append(float('nan'))
             continue
-
-        # if >50% of days have fewer than 6 valid measurements, skip station
-        vc = df.groupby(pd.Grouper(freq='D')).count()['pres'].value_counts(normalize=True)
-        underreported_days = sum(vc[vc.index <= 5])
-        if underreported_days > 0.5:
-            logger.warning(f'More than 50% underreported days for station {station_name}, {cc}.')
+        elif underreported_days > 0.5:
+            logger.warning(f'More than 50% underreported days for station {station}, {cc}.')
             av_frac_var.append(float('nan'))
             continue
 
         # Remove days with outliers from dataset
-        cleaned_df = remove_outliers(df)
+        cleaned_df = remove_outliers(station_df)
 
         # Calculate fraction of days per year with high pressure variation
         frac_var_yearly = get_variation_frac(cleaned_df)
@@ -110,15 +97,16 @@ def make_dataset(cc, cc_df, start, end):
     cc_df = cc_df.drop(cc_df[cc_df['frac_var'].isna()].index)
     return cc_df
 
+
 def remove_outliers(df):
     """
     Processes a dataframe df to remove days with outlier measurements in pressure.
 
     Args:
-        pd.DataFrame df: A pandas dataframe. Should contain a column 'pres'
+        pd.DataFrame df: A pandas dataframe of a single station. Should contain a column 'pres'
 
     Returns:
-        pd.DataFrame cleaned_df: A cleaned pandas dataframe
+        pd.DataFrame cleaned_df: A cleaned pandas dataframe.
     """
 
     cleaned_df = df.copy()
@@ -154,7 +142,7 @@ def get_variation_frac(df):
     Calculates the number of days with high pressure variation.
 
     Args:
-        pd.DataFrame df: A pandas dataframe. Should contain a column 'pres'
+        pd.DataFrame df: A pandas dataframe of a single station. Should contain a column 'pres'
 
     Returns:
         float fdays_yearly: The fraction of days per year with high pres variation.
@@ -162,29 +150,27 @@ def get_variation_frac(df):
 
     thresh = 10.
 
-    fdays_yearly = {}
     # loop over years
+    ndays_yearly = {}
     for yname, ygroup in df.groupby(pd.Grouper(freq='YE')):
-
         if len(ygroup['pres'])==0:
-            fdays_yearly[yname.year] = float('nan')
+            ndays_yearly[yname.year] = float('nan')
             continue
 
-        ndays = 0
         # loop over days
+        ndays = 0
         for dname, dgroup in ygroup.groupby(pd.Grouper(freq='D')):
             vrange = dgroup['pres'].max() - dgroup['pres'].min()
             if vrange >= thresh:
                 ndays += 1
 
         frac_days = ndays/len(list(set(ygroup.index.date)))
-        fdays_yearly[yname.year] = frac_days
-
+        ndays_yearly[yname.year] = frac_days
 
     # remove any remaining NaN values
-    fdays_yearly = {k: fdays_yearly[k] for k in fdays_yearly if not pd.isna(fdays_yearly[k])}
+    ndays_yearly = {k: ndays_yearly[k] for k in ndays_yearly if not pd.isna(ndays_yearly[k])}
     try:
-        frac_var_yearly = sum(fdays_yearly.values())/len(fdays_yearly)
+        frac_var_yearly = sum(ndays_yearly.values())/len(ndays_yearly)
     except ZeroDivisionError:
         frac_var_yearly = float('nan')
 

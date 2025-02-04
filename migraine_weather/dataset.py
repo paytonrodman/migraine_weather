@@ -30,8 +30,12 @@ def main(
     start = datetime(2010, 1, 1, 0, 0, 0)
     end = datetime(2020, 12, 31, 23, 59, 59)
 
+    # get dataframe containing all stations with required Hourly data around the world
     eligible_stations = make_dataset.get_eligible_stations('hourly', start, end)
-    for cc, cc_group in eligible_stations.groupby(by='country'): # loop through country groups
+
+    # loop through countries, checking if file exists/should be overwritten
+    # then make the dataset for that country
+    for cc, cc_group in eligible_stations.groupby(by='country'):
         file_exists = make_dataset.check_file_exists(cc, data_files, overwrite_flag=1)
 
         if not file_exists:
