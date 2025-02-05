@@ -6,6 +6,8 @@
 
 Analysis of weather data, specifically barometric air pressure changes, for migraine risk assessment.
 
+A short writeup, plus an **interactive plot** is available on my website [here](https://www.paytonelyce.com/project/migraine_pressure/)!
+
 ## Project Organization
 
 ```
