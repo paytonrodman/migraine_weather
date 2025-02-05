@@ -191,3 +191,17 @@ def get_country_codes():
     for c in list(pycountry.countries):
         country_codes.append(c.alpha_2)
     return country_codes
+
+def compile_data(input_path, output_path):
+    import glob
+    csv_files = glob.glob(str(input_path / '*.csv'))
+
+    data_list = []
+    for file in csv_files:
+        data = pd.read_csv(file)
+        if not data.empty:
+            data_list.append(data)
+
+    df = pd.concat(data_list)
+    df.set_index('id', inplace=True)
+    df.to_csv(output_path / "all.csv")

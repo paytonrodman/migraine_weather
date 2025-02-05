@@ -13,7 +13,7 @@ def plot_region(region, input_path, output_path):
     Args:
         string region: The region to be plotted. Must be selected from
             ['Asia', 'North America', 'South America', 'Oceania', 'Europe', 'Africa', 'World']
-        PosixPath input_path: The location of data files.
+        PosixPath input_path: The location of the concatenated data file.
         PosixPath output_path: The output folder where the plot will be saved.
 
     Returns:
@@ -55,7 +55,7 @@ def plot_world(fig, ax, input_path):
     Args:
         matplotlib Figure object fig: Figure to plot to.
         matplotlib Axes object ax: Axes to plot to.
-        PosixPath input_path: The location of data files.
+        PosixPath input_path: The location of the concatenated data file.
 
     Returns:
         matplotlib Figure object fig
@@ -75,11 +75,12 @@ def plot_world(fig, ax, input_path):
     ax.add_feature(cfeature.BORDERS)
 
     # get list of all station data available
-    appended_stations = get_all_stations(input_path)
+    #appended_stations = get_all_stations(input_path)
+    data = pd.read_csv(input_path / 'all.csv')
 
     # plot all station data
-    sc = plt.scatter(x=appended_stations["longitude"], y=appended_stations["latitude"],
-                    c=appended_stations["frac_var"],
+    sc = plt.scatter(x=data["longitude"], y=data["latitude"],
+                    c=data["frac_var"],
                     s=50,
                     vmin=0, vmax=0.3,
                     transform=ccrs.PlateCarree(),
@@ -93,35 +94,6 @@ def plot_world(fig, ax, input_path):
 
     return sc
 
-
-def get_all_stations(input_path):
-    """
-    A function to combine all available station data into one dataframe object.
-
-    Args:
-        PosixPath input_path: The location of data files.
-
-    Returns:
-        pd DataFrame appended_stations: A pandas dataframe object.
-    """
-
-    import pycountry
-    import os
-
-    country_codes = []
-    for c in list(pycountry.countries):
-        country_codes.append(c.alpha_2)
-
-    appended_stations = []
-    for cc in country_codes:
-        fname = input_path / f'{cc}.csv'
-        if os.path.isfile(fname):
-            stations = pd.read_csv(fname)
-            if not stations.empty:
-                appended_stations.append(stations)
-    appended_stations = pd.concat(appended_stations)
-
-    return appended_stations
 
 
 def get_lonlat(region):
