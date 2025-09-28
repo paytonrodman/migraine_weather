@@ -1,12 +1,14 @@
+"""
+Functions for processing data
+"""
+
+import logging
 import warnings
 
-from migraine_weather.config import PROCESSED_DATA_DIR
-
-import pandas as pd
-pd.set_option("mode.copy_on_write", True)
 import pycountry
 import meteostat
-from loguru import logger
+import pandas as pd
+pd.set_option("mode.copy_on_write", True)
 
 
 def check_file_exists(cc, data_files, overwrite_flag=0):
@@ -26,6 +28,7 @@ def check_file_exists(cc, data_files, overwrite_flag=0):
 
     return 0 if ((overwrite_flag) or (cc not in data_files)) else 1
 
+
 def get_eligible_stations(freq, start, end):
     """
     A function to determine if a file exists for a given country, or whether
@@ -42,6 +45,7 @@ def get_eligible_stations(freq, start, end):
     """
     eligible_stations = meteostat.Stations().inventory(freq.lower(), (start, end)).fetch() # get all stations with right hourly data, worldwide
     return eligible_stations
+
 
 def make_dataset(cc, cc_df, start, end):
     """
@@ -60,7 +64,7 @@ def make_dataset(cc, cc_df, start, end):
 
     n_stations = len(cc_df)
     if n_stations == 0:
-        logger.warning(f'No suitable stations available for {cc}.')
+        logging.warning(f'No suitable stations available for {cc}.')
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)
