@@ -2,8 +2,7 @@
 Tests for make_dataset.py
 """
 
-import sys
-sys.path.append("../..")  # Adds higher directory to python modules path.
+import pytest
 
 from migraine_weather import processing
 import pandas as pd
@@ -40,7 +39,7 @@ def test_get_eligible_stations():
     eligible_stations = processing.get_eligible_stations(freq, start, end)
 
     # test that all start and end times encapsulate the correct range
-    test_times = (eligible_stations[freq.lower()+'_start'].dt.year<=start.year) & (eligible_stations[freq.lower()+'_end'].dt.year>=end.year).all()
+    test_times = (eligible_stations[freq.lower() + '_start'].dt.year <= start.year) & (eligible_stations[freq.lower() + '_end'].dt.year >= end.year).all()
     assert test_times.all()
     # test that the output is of type pd.DataFrame
     assert isinstance(eligible_stations, pd.DataFrame)
