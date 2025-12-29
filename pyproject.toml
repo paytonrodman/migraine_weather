@@ -15,12 +15,12 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
   "cartopy>=0.25.0",
   "datetime>=5.5",
-  "logging~=0.4.9.6",
+  "logging>=0.4.9.6",
   "matplotlib>=3.10.6",
-  "meteostat~=1.7.4",
-  "numpy~=1.26",
-  "pandas~=2.1.0",
-  "pycountry~=24.6.1",
+  "meteostat>=1.7.4",
+  "numpy>=1.26",
+  "pandas>=2.2.0",
+  "pycountry>=24.6.1",
 ]
 
 [build-system]
