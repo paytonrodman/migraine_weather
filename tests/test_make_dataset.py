@@ -10,23 +10,25 @@ from datetime import datetime
 import meteostat
 
 
-def test_check_file_exists():
+@pytest.mark.parametrize(
+    "country_code,overwrite_flag,file_exists",
+    [
+        ("AU", False, True),
+        ("AU", True, False),
+        ("AA", False, False),
+        ("AA", True, False)
+    ],
+    ids=("no_overwrite_valid_cc", "overwrite_valid_cc", "no_overwrite_invalid_cc", "overwrite_invalid_cc")
+)
+def test_check_file_exists(country_code: str, overwrite_flag: bool, file_exists: bool):
     """
     Function to test check_file_exists from migraine_weather.make_dataset
     """
     country_codes = processing.get_country_codes()  # get list of real country codes
     test_data_files = [i + '.csv' for i in country_codes]  # make a mock list of data files
     test_data_files_regex = [d.split('/')[-1][:2] for d in test_data_files]  # remove .csv from mock files
-    test_cc_exists = 'AU'  # country code that does exist
-    test_cc_notexists = 'AA'  # country code that does not exist
 
-    # test that function returns 1 when overwrite_flag is 0 and file exists
-    assert processing.check_file_exists(test_cc_exists, test_data_files_regex, overwrite_flag=0) == 1
-    # test that function returns 0 when overwrite_flag is 1 and file exists
-    assert processing.check_file_exists(test_cc_exists, test_data_files_regex, overwrite_flag=1) == 0
-    # test that function returns 0 when non-existent cc is passed, regardless of overwrite_flag
-    assert processing.check_file_exists(test_cc_notexists, test_data_files_regex, overwrite_flag=0) == 0
-    assert processing.check_file_exists(test_cc_notexists, test_data_files_regex, overwrite_flag=1) == 0
+    assert processing.check_file_exists(country_code, test_data_files_regex, overwrite=overwrite_flag) == file_exists
 
 
 def test_get_eligible_stations():
@@ -82,15 +84,17 @@ def test_get_country_codes():
     assert isinstance(cc, list)
     # test that all entries have 2 letters
     lengths = [len(i) for i in cc]
-    assert len(list(set(lengths)))==1
-    assert list(set(lengths))[0]==2
+    assert len(list(set(lengths))) == 1
+    assert list(set(lengths))[0] == 2
 
 
 def get_test_stations():
     """
     Provides test station data for a single country (Australia, AU).
     """
-    return meteostat.Stations().region('AU').fetch()
+    au_stations = meteostat.Stations().region('AU').fetch()
+
+    return au_stations
 
 
 def get_test_data():
@@ -99,8 +103,11 @@ def get_test_data():
     """
     start, end = get_test_time()
     test_stations = get_test_stations()
-    test_station = test_stations[test_stations.name == 'Canberra']
-    return meteostat.Hourly(test_station.index[0], start, end).fetch()
+    station_id = test_stations.loc[test_stations["name"] == "Canberra"].index.item()
+
+    hourly = meteostat.Hourly(station_id, start, end).fetch()
+
+    return hourly
 
 
 def get_test_time():
