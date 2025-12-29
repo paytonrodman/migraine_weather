@@ -6,7 +6,7 @@ import logging
 import warnings
 import glob
 
-from typing import Iterable, List
+from typing import List
 from datetime import datetime
 from pathlib import Path
 
@@ -16,7 +16,7 @@ import pandas as pd
 pd.set_option("mode.copy_on_write", True)
 
 
-def check_file_exists(cc: str, data_files: Iterable, overwrite: bool = False) -> bool:
+def check_file_exists(cc: str, data_files: List[str], overwrite: bool = False) -> bool:
     """
     A function to determine if a file exists for a given country, or whether
     it should be overwritten.
@@ -198,8 +198,8 @@ def get_country_codes() -> List[str]:
     """
 
     country_codes: List[str] = []
-    for c in list(pycountry.countries):
-        country_codes.append(c.alpha_2)
+    for country in list(pycountry.countries):
+        country_codes.append(country.alpha_2)
     return country_codes
 
 

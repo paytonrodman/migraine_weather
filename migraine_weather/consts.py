@@ -2,17 +2,16 @@
 Useful constants for module
 """
 
-from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, LiteralString
 
-DATA_DIR: Path = "{project_root}/data"
-RAW_DATA_DIR: Path = "{data_dir}/raw"
-INTERIM_DATA_DIR: Path = "{data_dir}/interim"
-PROCESSED_DATA_DIR: Path = "{data_dir}/processed"
-MODELS_DIR: Path = "{project_root}/models"
-REPORTS_DIR: Path = "{project_root}/reports"
-FIGURES_DIR: Path = "{reports_dir}/figures"
-FIG_SAVE_PATH: Path = "{output_path}/{region}.png"
+DATA_DIR: LiteralString = "{project_root}/data"
+RAW_DATA_DIR: LiteralString = "{data_dir}/raw"
+INTERIM_DATA_DIR: LiteralString = "{data_dir}/interim"
+PROCESSED_DATA_DIR: LiteralString = "{data_dir}/processed"
+MODELS_DIR: LiteralString = "{project_root}/models"
+REPORTS_DIR: LiteralString = "{project_root}/reports"
+FIGURES_DIR: LiteralString = "{reports_dir}/figures"
+FIG_SAVE_PATH: LiteralString = "{output_path}/{region}.png"
 
 LONG_LAT_DICT: Dict[str, Dict[str, List[int, int]]] = {
     "World": {

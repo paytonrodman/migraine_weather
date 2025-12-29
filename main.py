@@ -12,13 +12,10 @@ from migraine_weather import processing
 
 
 def main(
-    input_path: Path = RAW_DATA_DIR.format(DATA_DIR),
-    interim_output_path: Path = INTERIM_DATA_DIR.format(DATA_DIR),
-    processed_output_path: Path = PROCESSED_DATA_DIR.format(DATA_DIR)
+    input_path: Path = Path(RAW_DATA_DIR.format(DATA_DIR)),
+    interim_output_path: Path = Path(INTERIM_DATA_DIR.format(DATA_DIR)),
+    processed_output_path: Path = Path(PROCESSED_DATA_DIR.format(DATA_DIR))
 ):
-
-    # get list of valid country codes
-    country_codes = processing.get_country_codes()
     # get list of country codes from existing datafiles
     data_files = [d.split('/')[-1][:2] for d in glob.glob(str(interim_output_path / '*'))]
 
@@ -31,13 +28,13 @@ def main(
 
     # loop through countries, checking if file exists/should be overwritten
     # then make the dataset for that country
-    for cc, cc_group in eligible_stations.groupby(by='country'):
-        file_exists = processing.check_file_exists(cc, data_files, overwrite_flag=0)
+    for country_code, country_stations in eligible_stations.groupby(by='country'):
+        file_exists = processing.check_file_exists(country_code, data_files, overwrite=False)
 
         if not file_exists:
-            logging.info(f"Generating dataset for {cc}...")
-            data = processing.make_dataset(cc, cc_group, start, end)
-            data.to_csv(interim_output_path / f"{cc}.csv")
+            logging.info("Generating dataset for %s...", country_code)
+            data = processing.make_dataset(country_code, country_stations, start, end)
+            data.to_csv(interim_output_path / f"{country_code}.csv")
 
     # compile country-level data to a single csv file
     processing.compile_data(interim_output_path, processed_output_path)
