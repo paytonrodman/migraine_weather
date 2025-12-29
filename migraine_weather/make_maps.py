@@ -7,8 +7,10 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
+import matplotlib.axes
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+import matplotlib.collections
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 
@@ -25,8 +27,8 @@ def plot_region(region: str, input_path: Path, output_path: Path):
     Args:
         string region: The region to be plotted. Must be selected from
             ['Asia', 'North America', 'South America', 'Oceania', 'Europe', 'Africa', 'World']
-        PosixPath input_path: The location of the concatenated data file.
-        PosixPath output_path: The output folder where the plot will be saved.
+        Path input_path: The location of the concatenated data file.
+        Path output_path: The output folder where the plot will be saved.
 
     Returns:
         None
@@ -42,8 +44,6 @@ def plot_region(region: str, input_path: Path, output_path: Path):
     # create world map of all data
     fig = plt.figure(figsize=(12, 8))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree(central_longitude=cent_lon))
-    print(type(ax))
-    print(jbdw)
     im = plot_world(fig, ax, input_path)
 
     if region != 'World':
@@ -63,7 +63,7 @@ def plot_region(region: str, input_path: Path, output_path: Path):
     plt.savefig(FIG_SAVE_PATH.format(output_path, region), bbox_inches='tight')
 
 
-def plot_world(ax: "AxesObject", input_path: Path):
+def plot_world(ax: matplotlib.axes.Axes, input_path: Path) -> matplotlib.collections.PathCollection:
     """
     A function to plot the entire Earth.
 
@@ -87,7 +87,7 @@ def plot_world(ax: "AxesObject", input_path: Path):
     data = pd.read_csv(input_path / 'all.csv')
 
     # plot all station data
-    sc = plt.scatter(
+    scatter_plot = plt.scatter(
         x=data["longitude"],
         y=data["latitude"],
         c=data["frac_var"],
@@ -103,4 +103,4 @@ def plot_world(ax: "AxesObject", input_path: Path):
     gl.top_labels = False
     gl.right_labels = False
 
-    return sc
+    return scatter_plot
