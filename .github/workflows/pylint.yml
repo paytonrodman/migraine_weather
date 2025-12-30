@@ -65,22 +65,17 @@ jobs:
           name: python-wheel
           path: dist
 
-      - name: Install dependencies
+      - name: Lint, type, security
         run: |
+          uv venv .venv
+          source .venv/bin/activate
           uv pip install --system dist/*.whl
-          uv pip install --system .[dev]
-
-      - name: ruff
-        run: uv pip run ruff check .
-
-      - name: black
-        run: uv pip run black --check .
-
-      - name: mypy
-        run: uv pip run mypy migraine_weather
-
-      - name: safety
-        run: uv pip run safety check
+          uv pip install --system .
+          uv pip install --system ruff black mypy safety
+          ruff check .
+          black --check .
+          mypy migraine_weather
+          safety check
 
   test:
     needs: build
