@@ -29,6 +29,7 @@ def main(
     # loop through countries, checking if file exists/should be overwritten
     # then make the dataset for that country
     for country_code, country_stations in eligible_stations.groupby(by='country'):
+        country_code = str(country_code)
         file_exists = processing.check_file_exists(country_code, data_files, overwrite=False)
 
         if not file_exists:
