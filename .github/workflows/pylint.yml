@@ -65,16 +65,40 @@ jobs:
           name: python-wheel
           path: dist
 
-      - name: Lint, type, security
+      - name: Set up virtual environment
         run: |
           uv venv .venv
           source .venv/bin/activate
+      
+      - name: Install package
+        run: |
+          source .venv/bin/activate
           uv pip install --system dist/*.whl
           uv pip install --system .
+      
+      - name: Install linting tools
+        run: |
+          source .venv/bin/activate
           uv pip install --system ruff black mypy safety
+      
+      - name: ruff
+        run: |
+          source .venv/bin/activate
           ruff check .
+      
+      - name: black
+        run: |
+          source .venv/bin/activate
           black --check .
+      
+      - name: mypy
+        run: |
+          source .venv/bin/activate
           mypy migraine_weather
+      
+      - name: safety
+        run: |
+          source .venv/bin/activate
           safety check
 
   test:
