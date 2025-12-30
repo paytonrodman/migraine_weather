@@ -65,35 +65,15 @@ jobs:
           name: python-wheel
           path: dist
 
-      - name: Create venv
-        run: uv venv .venv
-
-      - name: Install dependencies
+      - name: Lint, type, security
         run: |
+          uv venv .venv
           uv pip install --system dist/*.whl
           uv pip install --system .[dev]
-
-      - name: Add local bin to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: ruff
-        run: |
           source .venv/bin/activate
           ruff check .
-
-      - name: black
-        run: |
-          source .venv/bin/activate 
           black --check .
-
-      - name: mypy
-        run: |
-          source .venv/bin/activate 
           mypy migraine_weather
-
-      - name: safety
-        run: |
-          source .venv/bin/activate 
           safety check
 
   test:
