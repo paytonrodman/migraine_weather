@@ -65,14 +65,23 @@ jobs:
           name: python-wheel
           path: dist
 
-      - name: Install package + lint deps
+      - name: Install dependencies
         run: |
           uv pip install --system dist/*.whl
           uv pip install --system ruff
 
-      - name: Run ruff
+      - name: ruff
         run: |
           ruff check .
+
+      - name: black
+        run: black --check .
+
+      - name: mypy
+        run: mypy migraine_weather
+
+      - name: safety
+        run: safety check
 
   test:
     needs: build
@@ -82,7 +91,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -104,11 +113,11 @@ jobs:
           name: python-wheel
           path: dist
 
-      - name: Install package + test deps
+      - name: Install dependencies
         run: |
           uv pip install --system dist/*.whl
           uv pip install --system pytest
 
-      - name: Run pytest
+      - name: pytest
         run: |
           pytest --verbose
