@@ -67,7 +67,7 @@ jobs:
 
       - name: Install package + lint deps
         run: |
-          uv pip install dist/*.whl
+          uv pip install --system dist/*.whl
           uv pip install ruff
 
       - name: Run ruff
@@ -106,7 +106,7 @@ jobs:
 
       - name: Install package + test deps
         run: |
-          uv pip install dist/*.whl
+          uv pip install --system dist/*.whl
           uv pip install pytest
 
       - name: Run pytest
