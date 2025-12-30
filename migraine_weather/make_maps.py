@@ -17,7 +17,7 @@ import cartopy.feature as cfeature
 from .consts import LONG_LAT_DICT, FIG_SAVE_PATH
 
 plt.rcParams["font.family"] = "sans-serif"
-plt.rcParams['font.sans-serif'] = ['Open Sans']
+plt.rcParams["font.sans-serif"] = ["Open Sans"]
 
 
 def plot_region(region: str, input_path: Path, output_path: Path):
@@ -39,14 +39,14 @@ def plot_region(region: str, input_path: Path, output_path: Path):
     # Get latitude and longitude for the given region
     longitude_range: List = LONG_LAT_DICT[region]["lon"]
     latitude_range: List = LONG_LAT_DICT[region]["lat"]
-    cent_lon = (longitude_range[0] + longitude_range[1])/2.
+    cent_lon = (longitude_range[0] + longitude_range[1]) / 2.0
 
     # create world map of all data
     fig = plt.figure(figsize=(12, 8))
     ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree(central_longitude=cent_lon))
     im = plot_world(fig, ax, input_path)
 
-    if region != 'World':
+    if region != "World":
         im.set_sizes([5])
     else:
         im.set_sizes([1])
@@ -54,16 +54,18 @@ def plot_region(region: str, input_path: Path, output_path: Path):
     # restrict plot bounds for region of interest
     ax.set_extent(
         [longitude_range[0], longitude_range[1], latitude_range[0], latitude_range[1]],
-        crs=ccrs.PlateCarree()
+        crs=ccrs.PlateCarree(),
     )
 
-    cbar = fig.colorbar(im, orientation='vertical', extend='max')
-    cbar.set_label('Fraction of days with high pressure variation', rotation=270, labelpad=12)
+    cbar = fig.colorbar(im, orientation="vertical", extend="max")
+    cbar.set_label("Fraction of days with high pressure variation", rotation=270, labelpad=12)
 
-    plt.savefig(FIG_SAVE_PATH.format(output_path, region), bbox_inches='tight')
+    plt.savefig(FIG_SAVE_PATH.format(output_path, region), bbox_inches="tight")
 
 
-def plot_world(ax: matplotlib.axes.Axes, input_path: Path) -> matplotlib.collections.PathCollection:
+def plot_world(
+    ax: matplotlib.axes.Axes, input_path: Path
+) -> matplotlib.collections.PathCollection:
     """
     A function to plot the entire Earth.
 
@@ -77,14 +79,14 @@ def plot_world(ax: matplotlib.axes.Axes, input_path: Path) -> matplotlib.collect
         matplotlib Axes object ax
     """
     # add map features
-    ax.add_feature(cfeature.LAND, color='0.9')
+    ax.add_feature(cfeature.LAND, color="0.9")
     ax.add_feature(cfeature.OCEAN)
     ax.add_feature(cfeature.COASTLINE)
     ax.add_feature(cfeature.BORDERS)
 
     # get list of all station data available
     # appended_stations = get_all_stations(input_path)
-    data = pd.read_csv(input_path / 'all.csv')
+    data = pd.read_csv(input_path / "all.csv")
 
     # plot all station data
     scatter_plot = plt.scatter(
@@ -96,7 +98,7 @@ def plot_world(ax: matplotlib.axes.Axes, input_path: Path) -> matplotlib.collect
         vmax=0.3,
         transform=ccrs.PlateCarree(),
         cmap=cm.YlOrRd,
-        zorder=10
+        zorder=10,
     )
 
     gl = ax.gridlines(draw_labels=True, zorder=0, alpha=0.0)

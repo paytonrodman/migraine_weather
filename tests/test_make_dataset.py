@@ -12,23 +12,28 @@ import meteostat
 
 @pytest.mark.parametrize(
     "country_code,overwrite_flag,file_exists",
-    [
-        ("AU", False, True),
-        ("AU", True, False),
-        ("AA", False, False),
-        ("AA", True, False)
-    ],
-    ids=("no_overwrite_valid_cc", "overwrite_valid_cc", "no_overwrite_invalid_cc", "overwrite_invalid_cc")
+    [("AU", False, True), ("AU", True, False), ("AA", False, False), ("AA", True, False)],
+    ids=(
+        "no_overwrite_valid_cc",
+        "overwrite_valid_cc",
+        "no_overwrite_invalid_cc",
+        "overwrite_invalid_cc",
+    ),
 )
 def test_check_file_exists(country_code: str, overwrite_flag: bool, file_exists: bool):
     """
     Function to test check_file_exists from migraine_weather.make_dataset
     """
     country_codes = processing.get_country_codes()  # get list of real country codes
-    test_data_files = [i + '.csv' for i in country_codes]  # make a mock list of data files
-    test_data_files_regex = [d.split('/')[-1][:2] for d in test_data_files]  # remove .csv from mock files
+    test_data_files = [i + ".csv" for i in country_codes]  # make a mock list of data files
+    test_data_files_regex = [
+        d.split("/")[-1][:2] for d in test_data_files
+    ]  # remove .csv from mock files
 
-    assert processing.check_file_exists(country_code, test_data_files_regex, overwrite=overwrite_flag) == file_exists
+    assert (
+        processing.check_file_exists(country_code, test_data_files_regex, overwrite=overwrite_flag)
+        == file_exists
+    )
 
 
 def test_get_eligible_stations():
@@ -36,12 +41,14 @@ def test_get_eligible_stations():
     Function to test get_eligible_stations from migraine_weather.make_dataset
     """
     start, end = get_test_time()
-    freq = 'Hourly'
+    freq = "Hourly"
 
     eligible_stations = processing.get_eligible_stations(freq, start, end)
 
     # test that all start and end times encapsulate the correct range
-    test_times = (eligible_stations[freq.lower() + '_start'].dt.year <= start.year) & (eligible_stations[freq.lower() + '_end'].dt.year >= end.year).all()
+    test_times = (eligible_stations[freq.lower() + "_start"].dt.year <= start.year) & (
+        eligible_stations[freq.lower() + "_end"].dt.year >= end.year
+    ).all()
     assert test_times.all()
     # test that the output is of type pd.DataFrame
     assert isinstance(eligible_stations, pd.DataFrame)
@@ -92,7 +99,7 @@ def get_test_stations():
     """
     Provides test station data for a single country (Australia, AU).
     """
-    au_stations = meteostat.Stations().region('AU').fetch()
+    au_stations = meteostat.Stations().region("AU").fetch()
 
     return au_stations
 

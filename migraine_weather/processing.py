@@ -13,6 +13,7 @@ from pathlib import Path
 import pycountry
 import meteostat
 import pandas as pd
+
 pd.set_option("mode.copy_on_write", True)
 
 
@@ -47,11 +48,15 @@ def get_eligible_stations(freq: str, start: datetime, end: datetime) -> pd.DataF
         pd.DataFrame eligible_stations: A pandas dataframe object with all
             eligible stations.
     """
-    eligible_stations: pd.DataFrame = meteostat.Stations().inventory(freq.lower(), (start, end)).fetch()  # get all stations with right hourly data, worldwide
+    eligible_stations: pd.DataFrame = (
+        meteostat.Stations().inventory(freq.lower(), (start, end)).fetch()
+    )  # get all stations with right hourly data, worldwide
     return eligible_stations
 
 
-def make_dataset(country_code: str, country_station_data: pd.DataFrame, start: datetime, end: datetime) -> pd.DataFrame:
+def make_dataset(
+    country_code: str, country_station_data: pd.DataFrame, start: datetime, end: datetime
+) -> pd.DataFrame:
     """
     Generate a cleaned dataset with yearly fractional variation in pressure.
 
@@ -68,29 +73,39 @@ def make_dataset(country_code: str, country_station_data: pd.DataFrame, start: d
 
     n_stations: int = len(country_station_data)
     if not n_stations:
-        logging.warning('No suitable stations available for country code %s.', country_code)
+        logging.warning("No suitable stations available for country code %s.", country_code)
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)
-        hourly_data: pd.DataFrame = meteostat.Hourly(country_station_data, start, end, model=False).fetch()
+        hourly_data: pd.DataFrame = meteostat.Hourly(
+            country_station_data, start, end, model=False
+        ).fetch()
 
     # group by station ID
-    for station, station_df in hourly_data.groupby(by='station'):
+    for station, station_df in hourly_data.groupby(by="station"):
         # reindex to date only
-        station_df: pd.DataFrame = station_df.reset_index(['station'])
+        station_df: pd.DataFrame = station_df.reset_index(["station"])
 
         # calculate the total completeness and daily completeness
-        completeness: float = 1 - (sum(station_df['pres'].isna()) / len(station_df['pres'].isna()))
-        day_complete: pd.Series[float] = station_df.groupby(pd.Grouper(freq='D')).count()['pres'].value_counts(normalize=True)
+        completeness: float = 1 - (sum(station_df["pres"].isna()) / len(station_df["pres"].isna()))
+        day_complete: pd.Series[float] = (
+            station_df.groupby(pd.Grouper(freq="D")).count()["pres"].value_counts(normalize=True)
+        )
         underreported_days: float = sum(day_complete[day_complete.index < 6])
 
         if completeness < 0.5:
-            logging.warning('Completeness below 50 percent for station %s, %s.', station, country_code)
-            av_frac_var.append(float('nan'))
+            logging.warning(
+                "Completeness below 50 percent for station %s, %s.", station, country_code
+            )
+            av_frac_var.append(float("nan"))
             continue
         if underreported_days > 0.5:
-            logging.warning('More than 50 percent underreported days for station %s, %s.', station, country_code)
-            av_frac_var.append(float('nan'))
+            logging.warning(
+                "More than 50 percent underreported days for station %s, %s.",
+                station,
+                country_code,
+            )
+            av_frac_var.append(float("nan"))
             continue
 
         # Remove days with outliers from dataset
@@ -102,7 +117,9 @@ def make_dataset(country_code: str, country_station_data: pd.DataFrame, start: d
 
     # Add fractional variation to dataframe and drop NaNs
     country_station_data.insert(0, "frac_var", av_frac_var)
-    country_station_data = country_station_data.drop(country_station_data[country_station_data['frac_var'].isna()].index)
+    country_station_data = country_station_data.drop(
+        country_station_data[country_station_data["frac_var"].isna()].index
+    )
     return country_station_data
 
 
@@ -121,11 +138,13 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     df_var = dataframe.copy()
 
     # calculate pressure variation per hour
-    dt = (dataframe.index.to_series().diff().dt.days * 24.) + (dataframe.index.to_series().diff().dt.seconds // 3600)
-    df_var['dpres_per_hour'] = dataframe['pres'].diff() / dt
+    dt = (dataframe.index.to_series().diff().dt.days * 24.0) + (
+        dataframe.index.to_series().diff().dt.seconds // 3600
+    )
+    df_var["dpres_per_hour"] = dataframe["pres"].diff() / dt
 
     # determine IQR for dvar_per_hour
-    statistics = df_var['dpres_per_hour'].describe()
+    statistics = df_var["dpres_per_hour"].describe()
     q75 = statistics["75%"]
     q25 = statistics["25%"]
     intr_qr = q75 - q25
@@ -133,15 +152,17 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     minq = q25 - (3 * intr_qr)
 
     # Find outliers with >=2 variations outside 3 IQR
-    outliers = df_var[(df_var['dpres_per_hour'] < minq) | (df_var['dpres_per_hour'] > maxq)]
-    outliers['date'] = outliers.index.date
-    entry_counts = outliers['date'].value_counts()
+    outliers = df_var[(df_var["dpres_per_hour"] < minq) | (df_var["dpres_per_hour"] > maxq)]
+    outliers["date"] = outliers.index.date
+    entry_counts = outliers["date"].value_counts()
     valid_dates = entry_counts[entry_counts > 1].index
-    outliers = outliers[outliers['date'].isin(valid_dates)]
+    outliers = outliers[outliers["date"].isin(valid_dates)]
 
     # drop outlier days from dataframe
     drop_dates = list(set(outliers.index.date))
-    cleaned_df: pd.DataFrame = cleaned_df[~pd.Series(cleaned_df.index.date).isin(drop_dates).values]
+    cleaned_df: pd.DataFrame = cleaned_df[
+        ~pd.Series(cleaned_df.index.date).isin(drop_dates).values
+    ]
 
     return cleaned_df
 
@@ -157,19 +178,19 @@ def get_variation_frac(dataframe: pd.DataFrame) -> float:
         float fdays_yearly: The fraction of days per year with high pres variation.
     """
 
-    thresh = 10.
+    thresh = 10.0
 
     # loop over years
     ndays_yearly: dict[int, float] = {}
     for yname, ygroup in dataframe.groupby(pd.Grouper(freq="YE")):
-        if len(ygroup['pres']) == 0:
-            ndays_yearly[yname.year] = float('nan')
+        if len(ygroup["pres"]) == 0:
+            ndays_yearly[yname.year] = float("nan")
             continue
 
         # loop over days
         ndays: int = 0
-        for dname, dgroup in ygroup.groupby(pd.Grouper(freq='D')):
-            vrange = dgroup['pres'].max() - dgroup['pres'].min()
+        for dname, dgroup in ygroup.groupby(pd.Grouper(freq="D")):
+            vrange = dgroup["pres"].max() - dgroup["pres"].min()
             if vrange >= thresh:
                 ndays += 1
 
@@ -181,7 +202,7 @@ def get_variation_frac(dataframe: pd.DataFrame) -> float:
     try:
         frac_var_yearly = sum(ndays_yearly.values()) / len(ndays_yearly)
     except ZeroDivisionError:
-        frac_var_yearly = float('nan')
+        frac_var_yearly = float("nan")
 
     return frac_var_yearly
 
@@ -216,7 +237,7 @@ def compile_data(input_path: Path, output_path: Path):
         None
     """
 
-    csv_files = glob.glob(str(input_path / '*.csv'))
+    csv_files = glob.glob(str(input_path / "*.csv"))
 
     data_list: List[pd.DataFrame] = []
     for file in csv_files:
@@ -225,5 +246,5 @@ def compile_data(input_path: Path, output_path: Path):
             data_list.append(data)
 
     compiled_data = pd.concat(data_list)
-    compiled_data.set_index('id', inplace=True)
+    compiled_data.set_index("id", inplace=True)
     compiled_data.to_csv(output_path / "all.csv")
