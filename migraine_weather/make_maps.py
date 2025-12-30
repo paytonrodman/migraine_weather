@@ -13,6 +13,7 @@ import matplotlib.cm as cm
 import matplotlib.collections
 import cartopy.crs as ccrs
 import cartopy.feature as cfeature
+from cartopy.mpl.geoaxes import GeoAxes
 
 from .consts import LONG_LAT_DICT, FIG_SAVE_PATH
 
@@ -43,8 +44,8 @@ def plot_region(region: str, input_path: Path, output_path: Path):
 
     # create world map of all data
     fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree(central_longitude=cent_lon))
-    im = plot_world(fig, ax, input_path)
+    ax: GeoAxes = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree(central_longitude=cent_lon)) # type: ignore
+    im = plot_world(ax, input_path)
 
     if region != "World":
         im.set_sizes([5])
@@ -64,7 +65,7 @@ def plot_region(region: str, input_path: Path, output_path: Path):
 
 
 def plot_world(
-    ax: matplotlib.axes.Axes, input_path: Path
+    ax: GeoAxes, input_path: Path
 ) -> matplotlib.collections.PathCollection:
     """
     A function to plot the entire Earth.
@@ -97,7 +98,7 @@ def plot_world(
         vmin=0,
         vmax=0.3,
         transform=ccrs.PlateCarree(),
-        cmap=cm.YlOrRd,
+        cmap=cm.get_cmap("YlOrRd"),
         zorder=10,
     )
 

@@ -6,8 +6,8 @@ from migraine_weather import make_maps
 
 
 def plots(
-    input_path: Path = PROCESSED_DATA_DIR,
-    output_path: Path = FIGURES_DIR,
+    input_path: Path = Path(PROCESSED_DATA_DIR),
+    output_path: Path = Path(FIGURES_DIR),
 ):
     """
     Generates plots for predefined regions of the world map

@@ -84,7 +84,7 @@ def make_dataset(
     # group by station ID
     for station, station_df in hourly_data.groupby(by="station"):
         # reindex to date only
-        station_df: pd.DataFrame = station_df.reset_index(["station"])
+        station_df: pd.DataFrame = station_df.reset_index(["station"]) # type: ignore[no-redef]
 
         # calculate the total completeness and daily completeness
         completeness: float = 1 - (sum(station_df["pres"].isna()) / len(station_df["pres"].isna()))
@@ -134,7 +134,7 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame cleaned_df: A cleaned pandas dataframe.
     """
 
-    cleaned_df = dataframe.copy()
+    df_copy = dataframe.copy()
     df_var = dataframe.copy()
 
     # calculate pressure variation per hour
@@ -160,8 +160,8 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
 
     # drop outlier days from dataframe
     drop_dates = list(set(outliers.index.date))
-    cleaned_df: pd.DataFrame = cleaned_df[
-        ~pd.Series(cleaned_df.index.date).isin(drop_dates).values
+    cleaned_df: pd.DataFrame = df_copy[ # type: ignore[no-redef]
+        ~pd.Series(df_copy.index.date).isin(drop_dates).values
     ]
 
     return cleaned_df
