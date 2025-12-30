@@ -68,9 +68,10 @@ jobs:
       - name: Lint, type, security
         run: |
           uv venv .venv
-          uv pip install --system dist/*.whl
-          uv pip install --system .[dev]
           source .venv/bin/activate
+          uv pip install --system dist/*.whl
+          uv pip install --system .
+          uv pip install --system ruff black mypy safety
           ruff check .
           black --check .
           mypy migraine_weather
