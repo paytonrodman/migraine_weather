@@ -44,7 +44,7 @@ def plot_region(region: str, input_path: Path, output_path: Path):
 
     # create world map of all data
     fig = plt.figure(figsize=(12, 8))
-    ax: GeoAxes = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree(central_longitude=cent_lon)) # type: ignore
+    ax: GeoAxes = fig.add_subplot(1, 1, 1, projection=ccrs.PlateCarree(central_longitude=cent_lon))  # type: ignore
     im = plot_world(ax, input_path)
 
     if region != "World":
@@ -64,9 +64,7 @@ def plot_region(region: str, input_path: Path, output_path: Path):
     plt.savefig(FIG_SAVE_PATH.format(output_path, region), bbox_inches="tight")
 
 
-def plot_world(
-    ax: GeoAxes, input_path: Path
-) -> matplotlib.collections.PathCollection:
+def plot_world(ax: GeoAxes, input_path: Path) -> matplotlib.collections.PathCollection:
     """
     A function to plot the entire Earth.
 
