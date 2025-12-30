@@ -68,7 +68,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv pip install --system dist/*.whl
-          uv pip install --system ruff
+          uv pip install --system .[dev]
 
       - name: ruff
         run: |
