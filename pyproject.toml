@@ -41,6 +41,9 @@ exclude = '''
 )/
 '''
 
+[tool.ruff]
+exclude = [".venv", "*.ipynb"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["migraine_weather"]
 force-sort-within-sections = true
