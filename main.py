@@ -25,7 +25,7 @@ def process_country(args):
 
     logging.info("Generating dataset for %s...", country_code)
     eligible = data_acquisition.get_eligible_stations("hourly", start, end)
-    country_stations = eligible[eligible.index.str.startswith(country_code)]
+    country_stations = eligible[eligible["country"].startswith(country_code)]
 
     if country_stations.empty:
         return None

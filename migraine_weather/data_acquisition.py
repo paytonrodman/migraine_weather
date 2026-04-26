@@ -91,13 +91,13 @@ def make_dataset(
             country_station_data, start, end, model=False
         ).fetch()
 
-    station_counts = hourly_data.groupby("station")["pres"].count()
+    station_counts = hourly_data.groupby(level="station")["pres"].count()
     min_required = len(pd.date_range(start, end, freq="h")) * 0.5
     valid_stations = station_counts[station_counts.gt(min_required)].index
     hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
 
     # Prepare args for parallel processing
-    station_groups = list(hourly_data.groupby(by="station"))
+    station_groups = list(hourly_data.groupby(level="station"))
     with ThreadPoolExecutor(max_workers=4) as executor:
         av_frac_var = list(
             executor.map(_process_station, [(s, df, country_code) for s, df in station_groups])
