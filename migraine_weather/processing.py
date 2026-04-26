@@ -13,6 +13,7 @@ from pathlib import Path
 import pycountry
 import meteostat
 import pandas as pd
+from pandas import DatetimeIndex
 
 pd.set_option("mode.copy_on_write", True)
 
@@ -87,7 +88,8 @@ def make_dataset(
         station_df: pd.DataFrame = station_df.reset_index(["station"])  # type: ignore[no-redef]
 
         # calculate the total completeness and daily completeness
-        completeness: float = 1 - (sum(station_df["pres"].isna()) / len(station_df["pres"].isna()))
+        na_mask = station_df["pres"].isna()
+        completeness = 1 - na_mask.sum() / len(na_mask)
         day_complete: pd.Series[float] = (
             station_df.groupby(pd.Grouper(freq="D")).count()["pres"].value_counts(normalize=True)
         )
@@ -133,38 +135,27 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame cleaned_df: A cleaned pandas dataframe.
     """
-
-    df_copy = dataframe.copy()
-    df_var = dataframe.copy()
-
     # calculate pressure variation per hour
-    dt = (dataframe.index.to_series().diff().dt.days * 24.0) + (
-        dataframe.index.to_series().diff().dt.seconds // 3600
+    dt = (
+        dataframe.index.to_series().diff().dt.days * 24.0
+        + dataframe.index.to_series().diff().dt.seconds // 3600
     )
-    df_var["dpres_per_hour"] = dataframe["pres"].diff() / dt
+    dpres = dataframe["pres"].diff() / dt
 
-    # determine IQR for dvar_per_hour
-    statistics = df_var["dpres_per_hour"].describe()
-    q75 = statistics["75%"]
-    q25 = statistics["25%"]
-    intr_qr = q75 - q25
-    maxq = q75 + (3 * intr_qr)
-    minq = q25 - (3 * intr_qr)
+    # determine interquartile ranges
+    stats = dpres.describe()
+    iqr = stats["75%"] - stats["25%"]
+    maxq, minq = stats["75%"] + 3 * iqr, stats["25%"] - 3 * iqr
 
     # Find outliers with >=2 variations outside 3 IQR
-    outliers = df_var[(df_var["dpres_per_hour"] < minq) | (df_var["dpres_per_hour"] > maxq)]
-    outliers["date"] = outliers.index.date
-    entry_counts = outliers["date"].value_counts()
-    valid_dates = entry_counts[entry_counts > 1].index
-    outliers = outliers[outliers["date"].isin(valid_dates)]
+    outlier_dates = DatetimeIndex(dpres.index[(dpres < minq) | (dpres > maxq)]).normalize()
+    date_counts = pd.Series(outlier_dates).value_counts()
+    drop_dates = set(date_counts[date_counts > 1].index)
 
-    # drop outlier days from dataframe
-    drop_dates = list(set(outliers.index.date))
-    cleaned_df: pd.DataFrame = df_copy[  # type: ignore[no-redef]
-        ~pd.Series(df_copy.index.date).isin(drop_dates).values
-    ]
+    # mask outlier days from dataframe
+    mask = DatetimeIndex(dataframe.index).normalize().isin(drop_dates)
 
-    return cleaned_df
+    return dataframe[~mask]
 
 
 def get_variation_frac(dataframe: pd.DataFrame) -> float:
@@ -177,34 +168,23 @@ def get_variation_frac(dataframe: pd.DataFrame) -> float:
     Returns:
         float fdays_yearly: The fraction of days per year with high pres variation.
     """
-
     thresh = 10.0
+    pres = dataframe["pres"]
 
-    # loop over years
-    ndays_yearly: dict[int, float] = {}
-    for yname, ygroup in dataframe.groupby(pd.Grouper(freq="YE")):
-        if len(ygroup["pres"]) == 0:
-            ndays_yearly[yname.year] = float("nan")
-            continue
+    # Identify which days have pressure variation > threshold
+    daily = pres.groupby(pd.Grouper(freq="D")).agg(["max", "min"])
+    daily["high"] = (daily["max"] - daily["min"]) >= thresh
 
-        # loop over days
-        ndays: int = 0
-        for dname, dgroup in ygroup.groupby(pd.Grouper(freq="D")):
-            vrange = dgroup["pres"].max() - dgroup["pres"].min()
-            if vrange >= thresh:
-                ndays += 1
+    # Count number of days per year exceeding threshold, dropping empty years
+    yearly = daily.groupby(pd.Grouper(freq="YE"))["high"].agg(["sum", "count"])
+    yearly = yearly[yearly["count"] > 0]
+    if yearly.empty:
+        return float("nan")
 
-        frac_days = ndays / len(list(set(ygroup.index.date)))
-        ndays_yearly[yname.year] = frac_days
+    # Average number of days per year
+    frac_var_yearly = (yearly["sum"] / yearly["count"]).mean()
 
-    # remove any remaining NaN values
-    ndays_yearly = {k: ndays_yearly[k] for k in ndays_yearly if not pd.isna(ndays_yearly[k])}
-    try:
-        frac_var_yearly = sum(ndays_yearly.values()) / len(ndays_yearly)
-    except ZeroDivisionError:
-        frac_var_yearly = float("nan")
-
-    return frac_var_yearly
+    return float(frac_var_yearly)
 
 
 def get_country_codes() -> List[str]:
