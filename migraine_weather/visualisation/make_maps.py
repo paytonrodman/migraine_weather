@@ -4,7 +4,6 @@ Functions to make maps of weather data
 
 import logging
 from pathlib import Path
-from typing import List
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -58,8 +57,8 @@ def plot_region(region: str, input_path: Path, output_path: Path):
         logging.error("Region not found in region list.")
 
     # Get latitude and longitude for the given region
-    longitude_range: List = LONG_LAT_DICT[region]["lon"]
-    latitude_range: List = LONG_LAT_DICT[region]["lat"]
+    longitude_range: list = LONG_LAT_DICT[region]["lon"]
+    latitude_range: list = LONG_LAT_DICT[region]["lat"]
     cent_lon = (longitude_range[0] + longitude_range[1]) / 2.0
 
     # create world map of all data

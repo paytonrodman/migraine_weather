@@ -1,13 +1,13 @@
 import glob
+import logging
 
-from typing import List
 from pathlib import Path
 
 import pandas as pd
 import pycountry
 
 
-def check_file_exists(cc: str, data_files: List[str], overwrite: bool = False) -> bool:
+def check_file_exists(cc: str, data_files: list[str], overwrite: bool = False) -> bool:
     """
     A function to determine if a file exists for a given country, or whether
     it should be overwritten.
@@ -24,7 +24,7 @@ def check_file_exists(cc: str, data_files: List[str], overwrite: bool = False) -
     return False if ((overwrite) or (cc not in data_files)) else True
 
 
-def get_country_codes() -> List[str]:
+def get_country_codes() -> list[str]:
     """
     Produces a list of valid country codes.
 
@@ -52,12 +52,11 @@ def compile_data(input_path: Path, output_path: Path):
     """
 
     csv_files = glob.glob(str(input_path / "*.csv"))
+    data_list = [pd.read_csv(f) for f in csv_files if pd.read_csv(f, nrows=0).shape[1] > 0]
 
-    data_list: List[pd.DataFrame] = []
-    for file in csv_files:
-        data = pd.read_csv(file)
-        if not data.empty:
-            data_list.append(data)
+    if not data_list:
+        logging.warning("No data files found to compile")
+        return
 
     compiled_data = pd.concat(data_list)
     compiled_data.set_index("id", inplace=True)

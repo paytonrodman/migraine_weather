@@ -2,7 +2,7 @@
 Useful constants for module
 """
 
-from typing import Dict, List, LiteralString
+from typing import LiteralString
 
 DATA_DIR: LiteralString = "{project_root}/data"
 RAW_DATA_DIR: LiteralString = "{data_dir}/raw"
@@ -13,7 +13,7 @@ REPORTS_DIR: LiteralString = "{project_root}/reports"
 FIGURES_DIR: LiteralString = "{reports_dir}/figures"
 FIG_SAVE_PATH: LiteralString = "{output_path}/{region}.png"
 
-LONG_LAT_DICT: Dict[str, Dict[str, List[int]]] = {
+LONG_LAT_DICT: dict[str, dict[str, list[int]]] = {
     "World": {"lat": [-90, 90], "long": [-180, 180]},
     "Asia": {"lat": [-20, 80], "long": [30, 180]},
     "North America": {

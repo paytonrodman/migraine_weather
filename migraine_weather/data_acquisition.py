@@ -6,7 +6,6 @@ import logging
 import warnings
 import functools
 
-from typing import List
 from datetime import datetime
 
 import meteostat
@@ -83,7 +82,6 @@ def make_dataset(
     Returns:
         pd.DataFrame stations: A pandas DataFrame with added frac_var column
     """
-    av_frac_var: List[float] = []
 
     n_stations: int = len(country_station_data)
     if not n_stations:
