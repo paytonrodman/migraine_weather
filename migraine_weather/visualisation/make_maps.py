@@ -14,7 +14,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.mpl.geoaxes import GeoAxes
 
-from .consts import LONG_LAT_DICT, FIGURES_DIR, FIG_SAVE_PATH, PROCESSED_DATA_DIR
+from ..consts import LONG_LAT_DICT, FIGURES_DIR, FIG_SAVE_PATH, PROCESSED_DATA_DIR
 
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Open Sans"]
