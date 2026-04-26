@@ -16,7 +16,8 @@ from migraine_weather.utils import compile_data, check_file_exists, get_country_
 
 def process_country(args):
     """Process a single country with parallel station processing."""
-    country_code, start, end, overwrite, existing_files = args
+    country_code, start, end, overwrite, existing_files, all_eligible_stations = args
+    country_stations = all_eligible_stations[all_eligible_stations["country"] == country_code]
 
     # Skip if file exists and not overwriting
     if check_file_exists(country_code, existing_files, overwrite):
@@ -45,10 +46,13 @@ def main(
     # Date range to analyse
     start = datetime(2010, 1, 1, 0, 0, 0)
     end = datetime(2020, 12, 31, 23, 59, 59)
+    all_eligible_stations = data_acquisition.get_eligible_stations("hourly", start, end)
 
     # Process countries in parallel
     country_codes = get_country_codes()
-    args_list = [(cc, start, end, overwrite, existing_files) for cc in country_codes]
+    args_list = [
+        (cc, start, end, overwrite, existing_files, all_eligible_stations) for cc in country_codes
+    ]
     with ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
         results = executor.map(process_country, args_list)
 
