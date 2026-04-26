@@ -2,6 +2,7 @@
 Tests for make_dataset.py
 """
 
+from unittest.mock import Mock, patch
 import pandas as pd
 
 from migraine_weather import processing, data_acquisition
@@ -33,3 +34,121 @@ def test_get_variation_frac(test_data):
 
     # test that output is of type float
     assert isinstance(frac_var_test, float)
+
+
+def test_process_station_low_completeness():
+    """
+    Test that _process_station returns NaN for stations with <50% completeness.
+    """
+    # Create data with 60% missing values (40% completeness)
+    dates = pd.date_range("2020-01-01", periods=100, freq="h")
+    pressures = [1013.0] * 40 + [None] * 60
+
+    df = pd.DataFrame({"pres": pressures}, index=dates)
+    df.index.name = "time"
+    df["station"] = "TEST01"
+    df = df.set_index("station", append=True)
+
+    result = data_acquisition._process_station(("TEST01", df, "TS"))
+
+    # Should return NaN due to low completeness
+    assert pd.isna(result)
+
+
+def test_process_station_underreported_days():
+    """
+    Test that _process_station returns NaN for stations with >50% underreported days.
+    """
+    # Create 10 days where most days have <6 hourly readings
+    dates = []
+    pressures = []
+
+    # 7 days with only 3 readings each (underreported)
+    for day in range(7):
+        day_dates = pd.date_range(f"2020-01-{day + 1:02d}", periods=3, freq="h")
+        dates.extend(day_dates)
+        pressures.extend([1013.0] * 3)
+
+    # 3 days with full 24 readings (properly reported)
+    for day in range(7, 10):
+        day_dates = pd.date_range(f"2020-01-{day + 1:02d}", periods=24, freq="h")
+        dates.extend(day_dates)
+        pressures.extend([1013.0] * 24)
+
+    df = pd.DataFrame({"pres": pressures}, index=dates)
+    df.index.name = "time"
+    df["station"] = "TEST02"
+    df = df.set_index("station", append=True)
+
+    result = data_acquisition._process_station(("TEST02", df, "TS"))
+
+    # Should return NaN due to >50% underreported days
+    assert pd.isna(result)
+
+
+def test_make_dataset_filters_invalid_stations():
+    """
+    Test that make_dataset filters out stations with insufficient data early.
+    """
+    # Create mock station data
+    station_data = pd.DataFrame(
+        {"name": ["Station1", "Station2"], "latitude": [0.0, 1.0], "longitude": [0.0, 1.0]},
+        index=["ST001", "ST002"],
+    )
+
+    # Mock hourly data where ST001 has enough data, ST002 doesn't
+    mock_hourly = pd.DataFrame({"pres": [1013.0] * 100 + [1013.0] * 10})
+    mock_hourly["station"] = ["ST001"] * 100 + ["ST002"] * 10
+    mock_hourly.index = pd.date_range("2020-01-01", periods=110, freq="h")
+    mock_hourly = mock_hourly.set_index("station", append=True)
+
+    start = pd.Timestamp("2020-01-01")
+    end = pd.Timestamp("2020-01-05")
+
+    with patch("meteostat.Hourly") as mock_hourly_class:
+        mock_instance = Mock()
+        mock_instance.fetch.return_value = mock_hourly
+        mock_hourly_class.return_value = mock_instance
+
+        result = data_acquisition.make_dataset("TS", station_data, start, end)
+
+        # ST002 should be filtered out (only 10 readings < 50% of time range)
+        assert "ST002" not in result.index
+        # ST001 should remain
+        assert "ST001" in result.index
+
+
+def test_make_dataset_success():
+    """
+    Test that make_dataset works correctly with valid station data.
+    """
+    # Create mock station data
+    station_data = pd.DataFrame(
+        {"name": ["Station1"], "latitude": [0.0], "longitude": [0.0]}, index=["ST001"]
+    )
+
+    # Create mock hourly data with sufficient coverage
+    dates = pd.date_range("2020-01-01", periods=365 * 24, freq="h")
+    mock_hourly = pd.DataFrame({"pres": [1013.0] * len(dates)})
+    mock_hourly["station"] = "ST001"
+    mock_hourly.index = dates
+    mock_hourly = mock_hourly.set_index("station", append=True)
+
+    start = pd.Timestamp("2020-01-01")
+    end = pd.Timestamp("2020-12-31")
+
+    with patch("meteostat.Hourly") as mock_hourly_class:
+        mock_instance = Mock()
+        mock_instance.fetch.return_value = mock_hourly
+        mock_hourly_class.return_value = mock_instance
+
+        result = data_acquisition.make_dataset("TS", station_data, start, end)
+
+        # Station should be in result
+        assert "ST001" in result.index
+        # Should have frac_var column as first column
+        assert "frac_var" in result.columns
+        assert result.columns[0] == "frac_var"
+        # Should have a valid float value
+        assert isinstance(result.loc["ST001", "frac_var"], float)
+        assert not pd.isna(result.loc["ST001", "frac_var"])
