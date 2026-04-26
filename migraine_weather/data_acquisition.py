@@ -92,7 +92,7 @@ def make_dataset(
         ).fetch()
 
     station_counts = hourly_data.groupby("station")["pres"].count()
-    min_required = len(pd.date_range(start, end, freq="H")) * 0.5
+    min_required = len(pd.date_range(start, end, freq="h")) * 0.5
     valid_stations = station_counts[station_counts.gt(min_required)].index
     hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
 
