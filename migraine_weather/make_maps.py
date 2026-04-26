@@ -15,10 +15,31 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.mpl.geoaxes import GeoAxes
 
-from .consts import LONG_LAT_DICT, FIG_SAVE_PATH
+from .consts import LONG_LAT_DICT, FIGURES_DIR, FIG_SAVE_PATH, PROCESSED_DATA_DIR
 
 plt.rcParams["font.family"] = "sans-serif"
 plt.rcParams["font.sans-serif"] = ["Open Sans"]
+
+
+def plots(
+    input_path: Path = Path(PROCESSED_DATA_DIR),
+    output_path: Path = Path(FIGURES_DIR),
+):
+    """
+    Generates plots for predefined regions of the world map
+
+    Args:
+        Path input_path: The location of the processed data for plotting.
+        Path output_path: The location to save resulting figures
+
+    Returns:
+        None
+    """
+    for region in LONG_LAT_DICT.keys():
+        logging.info("Generating plot from data for %s...", region)
+        plot_region(region, input_path, output_path)
+
+    logging.info("Plot generation complete.")
 
 
 def plot_region(region: str, input_path: Path, output_path: Path):
