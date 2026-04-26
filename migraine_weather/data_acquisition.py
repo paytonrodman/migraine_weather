@@ -5,13 +5,11 @@ Functions for fetching data
 import logging
 import warnings
 import functools
-
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 import meteostat
 import pandas as pd
-
-from concurrent.futures import ThreadPoolExecutor
 
 from . import processing
 
@@ -95,7 +93,7 @@ def make_dataset(
 
     station_counts = hourly_data.groupby("station")["pres"].count()
     min_required = len(pd.date_range(start, end, freq="H")) * 0.5
-    valid_stations = station_counts[station_counts > min_required].index
+    valid_stations = station_counts[station_counts.gt(min_required)].index
     hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
 
     # Prepare args for parallel processing
