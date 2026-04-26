@@ -27,3 +27,6 @@ venv/
 
 # IDE
 .vscode/
+
+# local test runner
+test_run.py
