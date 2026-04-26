@@ -5,23 +5,31 @@ Main functions for processing weather data
 import logging
 from pathlib import Path
 from datetime import datetime
+from functools import partial
+import pandas as pd
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 
 from migraine_weather import data_acquisition
 from migraine_weather.consts import DATA_DIR, RAW_DATA_DIR, INTERIM_DATA_DIR, PROCESSED_DATA_DIR
-from migraine_weather.utils import compile_data, check_file_exists, get_country_codes
+from migraine_weather.utils import compile_data, get_country_codes
 
 
-def process_country(args):
+def process_country(
+    country_code: str,
+    all_eligible_stations: pd.DataFrame,
+    start: datetime,
+    end: datetime,
+    overwrite: bool,
+    interim_output_path: Path,
+):
     """Process a single country with parallel station processing."""
-    country_code, start, end, overwrite, existing_files, all_eligible_stations = args
     country_stations = all_eligible_stations[all_eligible_stations["country"] == country_code]
 
     # Skip if file exists and not overwriting
-    if check_file_exists(country_code, existing_files, overwrite):
-        logging.info("Skipping %s (file exists)", country_code)
+    output_file = interim_output_path / f"{country_code}.csv"
+    if output_file.exists() and not overwrite:
         return None
 
     logging.info("Generating dataset for %s...", country_code)
@@ -31,7 +39,10 @@ def process_country(args):
     if country_stations.empty:
         return None
 
-    return country_code, data_acquisition.make_dataset(country_code, country_stations, start, end)
+    data = data_acquisition.make_dataset(country_code, country_stations, start, end)
+    data.to_csv(output_file)
+    logging.info("Saved %s", country_code)
+    return country_code
 
 
 def main(
@@ -40,9 +51,6 @@ def main(
     processed_output_path: Path = Path(PROCESSED_DATA_DIR.format(DATA_DIR)),
     overwrite: bool = False,
 ):
-    # Get list of existing country files
-    existing_files = [f.stem[:2] for f in interim_output_path.glob("*.csv")]
-
     # Date range to analyse
     start = datetime(2010, 1, 1, 0, 0, 0)
     end = datetime(2020, 12, 31, 23, 59, 59)
@@ -50,17 +58,16 @@ def main(
 
     # Process countries in parallel
     country_codes = get_country_codes()
-    args_list = [
-        (cc, start, end, overwrite, existing_files, all_eligible_stations) for cc in country_codes
-    ]
+    process_func = partial(
+        process_country,
+        all_eligible_stations=all_eligible_stations,
+        start=start,
+        end=end,
+        overwrite=overwrite,
+        interim_output_path=interim_output_path,
+    )
     with ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
-        results = executor.map(process_country, args_list)
-
-    # Save results
-    for result in results:
-        if result is not None:
-            country_code, data = result
-            data.to_csv(interim_output_path / f"{country_code}.csv")
+        _completed_cc = executor.map(process_func, country_codes)
 
     # Compile country-level data to a single csv file
     compile_data(interim_output_path, processed_output_path)
