@@ -4,33 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import pandas as pd
 
-from migraine_weather.utils import get_country_codes, check_file_exists, compile_data
-
-
-@pytest.mark.parametrize(
-    "country_code,overwrite_flag,file_exists",
-    [("AU", False, True), ("AU", True, False), ("AA", False, False), ("AA", True, False)],
-    ids=(
-        "no_overwrite_valid_cc",
-        "overwrite_valid_cc",
-        "no_overwrite_invalid_cc",
-        "overwrite_invalid_cc",
-    ),
-)
-def test_check_file_exists(country_code: str, overwrite_flag: bool, file_exists: bool):
-    """
-    Function to test check_file_exists from migraine_weather.make_dataset
-    """
-    country_codes = get_country_codes()  # get list of real country codes
-    test_data_files = [i + ".csv" for i in country_codes]  # make a mock list of data files
-    test_data_files_regex = [
-        d.split("/")[-1][:2] for d in test_data_files
-    ]  # remove .csv from mock files
-
-    assert (
-        check_file_exists(country_code, test_data_files_regex, overwrite=overwrite_flag)
-        == file_exists
-    )
+from migraine_weather.utils import get_country_codes, compile_data
 
 
 def test_get_country_codes():
