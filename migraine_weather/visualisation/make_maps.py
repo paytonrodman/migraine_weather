@@ -57,7 +57,7 @@ def plot_region(region: str, input_path: Path, output_path: Path):
         logging.error("Region not found in region list.")
 
     # Get latitude and longitude for the given region
-    longitude_range: list = LONG_LAT_DICT[region]["lon"]
+    longitude_range: list = LONG_LAT_DICT[region]["long"]
     latitude_range: list = LONG_LAT_DICT[region]["lat"]
     cent_lon = (longitude_range[0] + longitude_range[1]) / 2.0
 
