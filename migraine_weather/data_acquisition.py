@@ -1,9 +1,10 @@
 """
-Functions for processing data
+Functions for fetching data
 """
 
 import logging
 import warnings
+import functools
 
 from typing import List
 from datetime import datetime
@@ -11,8 +12,7 @@ from datetime import datetime
 import meteostat
 import pandas as pd
 
-from concurrent.futures import ProcessPoolExecutor
-import multiprocessing as mp
+from concurrent.futures import ThreadPoolExecutor
 
 from . import processing
 
@@ -34,7 +34,13 @@ def _process_station(args):
     )
     underreported_days = sum(day_complete[day_complete.index < 6])
 
-    if completeness < 0.5 or underreported_days > 0.5:
+    if completeness < 0.5:
+        logging.warning("Completeness below 50%% for station %s, %s.", station, country_code)
+        return float("nan")
+    if underreported_days > 0.5:
+        logging.warning(
+            "More than 50%% underreported days for station %s, %s.", station, country_code
+        )
         return float("nan")
 
     # Remove days with outliers from dataset
@@ -42,13 +48,13 @@ def _process_station(args):
     return processing.get_variation_frac(cleaned_df)
 
 
+@functools.lru_cache(maxsize=1)
 def get_eligible_stations(freq: str, start: datetime, end: datetime) -> pd.DataFrame:
     """
-    A function to determine if a file exists for a given country, or whether
-    it should be overwritten.
+    Fetch all weather stations with data available for the specified frequency and time range.
 
     Args:
-        string freq: A string corresponding to data frequency neeed (e.g. daily, hourly).
+        string freq: A string corresponding to data frequency needed (e.g. daily, hourly).
         datetime start: A datetime object. The start datetime for data analysis
         datetime end: A datetime object. The end datetime for data analysis
 
@@ -89,17 +95,22 @@ def make_dataset(
             country_station_data, start, end, model=False
         ).fetch()
 
+    station_counts = hourly_data.groupby("station")["pres"].count()
+    min_required = len(pd.date_range(start, end, freq="H")) * 0.5
+    valid_stations = station_counts[station_counts > min_required].index
+    hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
+
     # Prepare args for parallel processing
-    station_args = [
-        (station, station_df, country_code)
-        for station, station_df in hourly_data.groupby(by="station")
-    ]
-    # Process in parallel
-    with ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
-        av_frac_var = list(executor.map(_process_station, station_args))
+    station_groups = list(hourly_data.groupby(by="station"))
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        av_frac_var = list(
+            executor.map(_process_station, [(s, df, country_code) for s, df in station_groups])
+        )
 
     # Add fractional variation to dataframe and drop NaNs
+    country_station_data = country_station_data[country_station_data.index.isin(valid_stations)]
     country_station_data.insert(0, "frac_var", av_frac_var)
+
     country_station_data = country_station_data.drop(
         country_station_data[country_station_data["frac_var"].isna()].index
     )
