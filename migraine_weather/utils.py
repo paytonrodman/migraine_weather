@@ -3,8 +3,25 @@ import glob
 from typing import List
 from pathlib import Path
 
-import pycountry
 import pandas as pd
+import pycountry
+
+
+def check_file_exists(cc: str, data_files: List[str], overwrite: bool = False) -> bool:
+    """
+    A function to determine if a file exists for a given country, or whether
+    it should be overwritten.
+
+    Args:
+        string cc: An ISO 2 country code.
+        Iterable data_files: List of data files that already exist.
+        bool overwrite: A flag indicating data should be overwritten.
+
+    Returns:
+        A boolean indicating the file existence/overwrite state
+    """
+
+    return False if ((overwrite) or (cc not in data_files)) else True
 
 
 def get_country_codes() -> List[str]:

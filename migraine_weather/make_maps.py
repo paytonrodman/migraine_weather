@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import List
 
 import pandas as pd
-import matplotlib.axes
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.collections

@@ -2,29 +2,10 @@
 Functions for processing data
 """
 
-from typing import List
-
 import pandas as pd
 from pandas import DatetimeIndex
 
 pd.set_option("mode.copy_on_write", True)
-
-
-def check_file_exists(cc: str, data_files: List[str], overwrite: bool = False) -> bool:
-    """
-    A function to determine if a file exists for a given country, or whether
-    it should be overwritten.
-
-    Args:
-        string cc: An ISO 2 country code.
-        Iterable data_files: List of data files that already exist.
-        bool overwrite: A flag indicating data should be overwritten.
-
-    Returns:
-        A boolean indicating the file existence/overwrite state
-    """
-
-    return False if ((overwrite) or (cc not in data_files)) else True
 
 
 def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
