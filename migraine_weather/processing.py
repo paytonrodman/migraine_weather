@@ -18,26 +18,19 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     Returns:
         pd.DataFrame cleaned_df: A cleaned pandas dataframe.
     """
-    # calculate pressure variation per hour
-    dt = (
-        dataframe.index.to_series().diff().dt.days * 24.0
-        + dataframe.index.to_series().diff().dt.seconds // 3600
-    )
+    # Calculate pressure variation per hour
+    dt = dataframe.index.to_series().diff().dt.total_seconds() / 3600
     dpres = dataframe["pres"].diff() / dt
 
-    # determine interquartile ranges
-    stats = dpres.describe()
-    iqr = stats["75%"] - stats["25%"]
-    maxq, minq = stats["75%"] + 3 * iqr, stats["25%"] - 3 * iqr
-
     # Find outliers with >=2 variations outside 3 IQR
-    outlier_dates = DatetimeIndex(dpres.index[(dpres < minq) | (dpres > maxq)]).normalize()
-    date_counts = pd.Series(outlier_dates).value_counts()
-    drop_dates = set(date_counts[date_counts > 1].index)
+    q25, q75 = dpres.quantile([0.25, 0.75])
+    iqr = q75 - q25
+    is_outlier = (dpres < (q25 - 3 * iqr)) | (dpres > (q75 + 3 * iqr))
+    outlier_dates = dpres[is_outlier].index.normalize()
+    drop_dates = set(outlier_dates.value_counts()[lambda x: x > 1].index)
 
-    # mask outlier days from dataframe
+    # Mask outlier days from dataframe
     mask = DatetimeIndex(dataframe.index).normalize().isin(drop_dates)
-
     return dataframe[~mask]
 
 

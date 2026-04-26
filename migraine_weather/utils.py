@@ -35,10 +35,7 @@ def get_country_codes() -> List[str]:
         A list of valid ISO 2 country codes.
     """
 
-    country_codes: List[str] = []
-    for country in list(pycountry.countries):
-        country_codes.append(country.alpha_2)
-    return country_codes
+    return [country.alpha_2 for country in pycountry.countries]
 
 
 def compile_data(input_path: Path, output_path: Path):
