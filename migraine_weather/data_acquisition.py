@@ -18,6 +18,8 @@ from . import processing
 def _process_station(args: tuple[str, pd.DataFrame], country_code: str):
     """Worker function to process a single station."""
     station, station_df = args
+    logging.debug("Processing station %s, %s.", station, country_code)
+
     station_df = station_df.reset_index(["station"])  # Re-index to date only
 
     # Calculate completeness
@@ -103,7 +105,7 @@ def make_dataset(
     valid_stations = station_counts[station_counts.gt(min_required)].index
 
     if n_filtered := (len(station_counts) - len(valid_stations)):
-        logging.info(
+        logging.debug(
             "Filtered %d/%d stations in %s with insufficient pressure data.",
             n_filtered,
             len(station_counts),
