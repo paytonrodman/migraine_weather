@@ -95,9 +95,7 @@ def make_dataset(
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)
-        hourly_data: pd.DataFrame = meteostat.Hourly(
-            country_station_data, start, end, model=False
-        ).fetch()
+        hourly_data: pd.DataFrame = meteostat.hourly(country_station_data, start, end).fetch()
 
     station_counts = hourly_data.groupby(level="station")["pres"].count()
     min_required = len(pd.date_range(start, end, freq="h")) * 0.5
