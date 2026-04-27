@@ -1,5 +1,5 @@
 """
-Tests for make_dataset.py
+Tests for data_acquisition.py
 """
 
 from unittest.mock import Mock, patch

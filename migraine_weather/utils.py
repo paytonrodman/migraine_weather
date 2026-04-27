@@ -1,3 +1,7 @@
+"""
+Common utility functions
+"""
+
 import glob
 import logging
 
