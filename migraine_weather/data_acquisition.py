@@ -115,7 +115,13 @@ def make_dataset(
     process = partial(_process_station, country_code=country_code)
     station_groups = list(hourly_data.groupby(level="station"))
     with ThreadPoolExecutor(max_workers=4) as executor:
-        daily_results = list(executor.map(process, station_groups))
+        futures = executor.map(process, station_groups)
+        try:
+            daily_results = list(futures)
+        except KeyboardInterrupt:
+            logging.info("Interrupted during station processing for %s.", country_code)
+            executor.shutdown(wait=False, cancel_futures=True)
+            raise
 
     # Build dict of station_id -> daily DataFrame
     result = {}

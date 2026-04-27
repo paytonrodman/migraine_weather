@@ -72,7 +72,14 @@ def main(
         daily_output_path=daily_output_path,
     )
     with ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
-        executor.map(process_func, country_codes)
+        futures = executor.map(process_func, country_codes)
+        try:
+            for _ in futures:
+                pass
+        except KeyboardInterrupt:
+            logging.info("Interrupted, shutting down...")
+            executor.shutdown(wait=False, cancel_futures=True)
+            return
 
     logging.info("Processing dataset complete.")
 
