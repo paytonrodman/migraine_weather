@@ -16,7 +16,7 @@ import multiprocessing as mp
 import meteostat
 from migraine_weather import data_acquisition
 from migraine_weather.consts import DATA_DIR
-from migraine_weather.utils import get_country_codes
+from migraine_weather.utils import get_country_codes, save_station_metadata
 
 meteostat.config.block_large_requests = False
 app = typer.Typer()
@@ -109,6 +109,7 @@ def main(
             return
 
     logging.info("Processing dataset complete.")
+    save_station_metadata(all_eligible_stations, daily_output_path, Path("data/processed"))
 
 
 if __name__ == "__main__":

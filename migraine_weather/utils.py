@@ -2,7 +2,6 @@
 Common utility functions
 """
 
-import glob
 import logging
 
 from pathlib import Path
@@ -25,26 +24,23 @@ def get_country_codes() -> list[str]:
     return [country.alpha_2 for country in pycountry.countries]
 
 
-def compile_data(input_path: Path, output_path: Path):
+def save_station_metadata(stations: pd.DataFrame, daily_path: Path, output_path: Path):
     """
-    Compiles all CSV file data found at input_path into a single
-    CSV file saved to output_path
+    Saves metadata for stations that have processed daily data.
 
     Args:
-        Path input_path: the Path location to compile
-        Path output_path: the Path location to save to
+        stations: DataFrame of all eligible stations (from get_eligible_stations).
+        daily_path: Path to directory containing per-station Parquet files.
+        output_path: Path to save the metadata CSV.
 
     Returns:
         None
     """
-
-    csv_files = glob.glob(str(input_path / "*.csv"))
-    data_list = [pd.read_csv(f) for f in csv_files if pd.read_csv(f, nrows=0).shape[1] > 0]
-
-    if not data_list:
-        logging.warning("No data files found to compile")
+    processed_ids = {f.stem for f in daily_path.glob("*.parquet")}
+    if not processed_ids:
+        logging.warning("No processed station data found at %s", daily_path)
         return
 
-    compiled_data = pd.concat(data_list)
-    compiled_data.set_index("id", inplace=True)
-    compiled_data.to_csv(output_path / "all.csv")
+    metadata = stations[stations.index.isin(processed_ids)]
+    metadata.to_csv(output_path / "stations.csv")
+    logging.info("Saved metadata for %d stations.", len(metadata))
