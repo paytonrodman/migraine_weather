@@ -5,8 +5,6 @@ Functions for processing data
 import pandas as pd
 from pandas import DatetimeIndex
 
-pd.set_option("mode.copy_on_write", True)
-
 
 def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     """

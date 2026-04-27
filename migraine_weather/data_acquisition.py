@@ -13,8 +13,6 @@ import pandas as pd
 
 from . import processing
 
-pd.set_option("mode.copy_on_write", True)
-
 
 def _process_station(args):
     """Worker function to process a single station."""
