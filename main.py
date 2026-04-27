@@ -8,7 +8,7 @@ from datetime import datetime
 from functools import partial
 import pandas as pd
 import typer
-
+import pycountry
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
@@ -35,9 +35,11 @@ def process_country(
     daily_output_path: Path,
 ):
     """Process a single country with parallel station processing."""
+    country = pycountry.countries.get(alpha_2=country_code)
+    country_name = country.name if country else country_code
     country_stations = all_eligible_stations[all_eligible_stations["country"] == country_code]
     if country_stations.empty:
-        logging.debug("No eligible stations for %s, skipping.", country_code)
+        logging.debug("No eligible stations for %s (%s), skipping.", country_name, country_code)
         return
 
     # Skip if all stations already have data
@@ -45,16 +47,26 @@ def process_country(
         s for s in country_stations.index if not (daily_output_path / f"{s}.parquet").exists()
     ]
     if not missing:
-        logging.debug("All stations for %s already processed, skipping.", country_code)
+        logging.debug(
+            "All stations for %s (%s) already processed, skipping.", country_name, country_code
+        )
         return
 
-    logging.info("Processing %s (%d/%d stations missing)...", country_code, len(missing), len(country_stations))
+    logging.info(
+        "Processing %s (%s) (%d/%d stations missing)...",
+        country_name,
+        country_code,
+        len(missing),
+        len(country_stations),
+    )
     station_daily_data = data_acquisition.make_dataset(country_code, country_stations, start, end)
 
     for station_id, daily_df in station_daily_data.items():
         daily_df.to_parquet(daily_output_path / f"{station_id}.parquet", index=False)
 
-    logging.info("Saved %d stations for %s.", len(station_daily_data), country_code)
+    logging.info(
+        "Saved %d stations for %s (%s).", len(station_daily_data), country_name, country_code
+    )
 
 
 @app.command()
@@ -70,7 +82,11 @@ def main(
     end = end_date
     logging.info("Fetching eligible stations for %s to %s...", start.date(), end.date())
     all_eligible_stations = data_acquisition.get_eligible_stations(start, end)
-    logging.info("Found %d eligible stations across %d countries.", len(all_eligible_stations), all_eligible_stations["country"].nunique())
+    logging.info(
+        "Found %d eligible stations across %d countries.",
+        len(all_eligible_stations),
+        all_eligible_stations["country"].nunique(),
+    )
 
     # Process countries in parallel
     country_codes = get_country_codes()
