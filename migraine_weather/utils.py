@@ -12,13 +12,10 @@ import pycountry
 
 def get_country_codes() -> list[str]:
     """
-    Produces a list of valid country codes.
-
-    Args:
-        None
+    Return a list of all ISO 3166-1 alpha-2 country codes.
 
     Returns:
-        A list of valid ISO 2 country codes.
+        List of two-letter country codes.
     """
 
     return [country.alpha_2 for country in pycountry.countries]

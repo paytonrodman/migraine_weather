@@ -24,11 +24,11 @@ def plots(
     output_path: Path = Path(FIGURES_DIR),
 ):
     """
-    Generates plots for predefined regions of the world map
+    Generate plots for all predefined world regions.
 
     Args:
-        Path input_path: The location of the processed data for plotting.
-        Path output_path: The location to save resulting figures
+        input_path: Location of the processed station data.
+        output_path: Directory to save the resulting figures.
 
     Returns:
         None
@@ -42,13 +42,12 @@ def plots(
 
 def plot_region(region: str, input_path: Path, output_path: Path):
     """
-    A function to plot a particular region of the Earth.
+    Plot pressure variation data for a specific world region.
 
     Args:
-        string region: The region to be plotted. Must be selected from
-            ['Asia', 'North America', 'South America', 'Oceania', 'Europe', 'Africa', 'World']
-        Path input_path: The location of the concatenated data file.
-        Path output_path: The output folder where the plot will be saved.
+        region: Region name. Must be one of the keys in LONG_LAT_DICT.
+        input_path: Location of the processed station data file.
+        output_path: Directory to save the resulting figure.
 
     Returns:
         None
@@ -85,16 +84,14 @@ def plot_region(region: str, input_path: Path, output_path: Path):
 
 def plot_world(ax: GeoAxes, input_path: Path) -> matplotlib.collections.PathCollection:
     """
-    A function to plot the entire Earth.
+    Plot all station data onto a world map axes.
 
     Args:
-        matplotlib Figure object fig: Figure to plot to.
-        matplotlib Axes object ax: Axes to plot to.
-        PosixPath input_path: The location of the concatenated data file.
+        ax: Cartopy GeoAxes to plot onto.
+        input_path: Location of the processed station data file.
 
     Returns:
-        matplotlib Figure object fig
-        matplotlib Axes object ax
+        Scatter plot PathCollection for use in a colorbar.
     """
     # add map features
     ax.add_feature(cfeature.LAND, color="0.9")

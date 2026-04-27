@@ -21,7 +21,18 @@ def _process_station(
     start: datetime,
     end: datetime,
 ) -> tuple[str, pd.DataFrame] | None:
-    """Fetch and process a single station."""
+    """
+    Fetch and process hourly data for a single station.
+
+    Args:
+        args: Tuple of (station_id, station_metadata).
+        country_code: ISO 2 country code, used for logging.
+        start: Start datetime for data fetch.
+        end: End datetime for data fetch.
+
+    Returns:
+        Tuple of (station_id, daily DataFrame) if station passes quality checks, else None.
+    """
     station_id, station_meta = args
     logging.debug("Processing station %s, %s.", station_id, country_code)
 
@@ -56,16 +67,14 @@ def _process_station(
 @functools.lru_cache(maxsize=1)
 def get_eligible_stations(start: datetime, end: datetime) -> pd.DataFrame:
     """
-    Fetch all weather stations with data available for the specified frequency and time range.
+    Fetch all weather stations with pressure data available in the given time range.
 
     Args:
-        string freq: A string corresponding to data frequency needed (e.g. daily, hourly).
-        datetime start: A datetime object. The start datetime for data analysis
-        datetime end: A datetime object. The end datetime for data analysis
+        start: Start datetime for data availability check.
+        end: End datetime for data availability check.
 
     Returns:
-        pd.DataFrame eligible_stations: A pandas dataframe object with all
-            eligible stations.
+        DataFrame of eligible stations indexed by station id.
     """
     return meteostat.stations.query(
         """
@@ -98,7 +107,7 @@ def make_dataset(
     Returns:
         dict mapping station_id -> DataFrame(date, pres_min, pres_max)
     """
-    if len(country_station_data) == 0:
+    if country_station_data.empty:
         logging.warning("No suitable stations available for country code %s.", country_code)
         return {}
 

@@ -10,8 +10,11 @@ def get_daily_pressure_range(dataframe: pd.DataFrame) -> pd.DataFrame:
     """
     Calculate daily min/max pressure after removing outliers.
 
+    Args:
+        dataframe: Hourly pressure data for a single station. Must contain a 'pres' column.
+
     Returns:
-        pd.DataFrame with columns: date, pres_min, pres_max
+        DataFrame with columns: date, pres_min, pres_max.
     """
     cleaned = remove_outliers(dataframe)  # Remove days with outliers from dataset
 
@@ -23,13 +26,13 @@ def get_daily_pressure_range(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     """
-    Processes a dataframe df to remove days with outlier measurements in pressure.
+    Remove days with outlier pressure measurements from a station DataFrame.
 
     Args:
-        pd.DataFrame dataframe: A pandas dataframe of a single station. Should contain a column 'pres'
+        dataframe: Hourly pressure data for a single station. Must contain a 'pres' column.
 
     Returns:
-        pd.DataFrame cleaned_df: A cleaned pandas dataframe.
+        DataFrame with outlier days removed.
     """
     # Calculate pressure variation per hour
     dt = dataframe.index.to_series().diff().dt.total_seconds() / 3600
@@ -51,14 +54,14 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
 
 def compute_frac_var(daily_df: pd.DataFrame, thresh: float = 10.0) -> float:
     """
-    Calculates the number of days with high pressure variation.
+    Calculate the mean annual fraction of days with pressure variation above a threshold.
 
     Args:
-        pd.DataFrame daily_df: A pandas dataframe of a single station. Should contain a column 'pres'
-        thresh: pressure change threshold in hPa
+        daily_df: Daily pressure data with columns: date, pres_min, pres_max.
+        thresh: Pressure change threshold in hPa.
 
     Returns:
-        float fdays_yearly: The fraction of days per year with high pres variation.
+        Mean fraction of high-variation days per year, or nan if no data.
     """
     daily_df = daily_df.copy()
     daily_df["high"] = (daily_df["pres_max"] - daily_df["pres_min"]) >= thresh
