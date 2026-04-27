@@ -23,11 +23,10 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     # Find outliers with >=2 variations outside 3 IQR
     q25, q75 = dpres.quantile([0.25, 0.75])
     iqr = q75 - q25
-    is_outlier = (dpres < (q25 - 3 * iqr)) | (dpres > (q75 + 3 * iqr))
+    is_outlier: pd.Series = (dpres < (q25 - 3 * iqr)) | (dpres > (q75 + 3 * iqr))
     if not is_outlier.any():
         return dataframe
-
-    outlier_dates = dpres[is_outlier].index.normalize()
+    outlier_dates = pd.DatetimeIndex(dpres[is_outlier].index).normalize()
     drop_dates = set(outlier_dates.value_counts()[lambda x: x > 1].index)
 
     # Mask outlier days from dataframe

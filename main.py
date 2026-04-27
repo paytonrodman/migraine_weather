@@ -37,14 +37,15 @@ def process_country(
 
     logging.info("Generating dataset for %s...", country_code)
     eligible = data_acquisition.get_eligible_stations(start, end)
-    country_stations = eligible[eligible["country"].startswith(country_code)]
+    country_stations: pd.DataFrame = eligible[eligible["country"].startswith(country_code)]
 
     if country_stations.empty:
         return None
 
     data = data_acquisition.make_dataset(country_code, country_stations, start, end)
-    data.to_csv(output_file)
-    logging.info("Saved %s", country_code)
+    if not data.empty:
+        data.to_csv(output_file)
+        logging.info("Saved %s", country_code)
     return country_code
 
 

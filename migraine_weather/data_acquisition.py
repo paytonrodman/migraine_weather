@@ -5,6 +5,7 @@ Functions for fetching data
 import logging
 import warnings
 import functools
+from functools import partial
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
@@ -14,9 +15,9 @@ import pandas as pd
 from . import processing
 
 
-def _process_station(args):
+def _process_station(args: tuple[str, pd.DataFrame], country_code: str):
     """Worker function to process a single station."""
-    station, station_df, country_code = args
+    station, station_df = args
 
     # Re-index to date only
     station_df = station_df.reset_index(["station"])
@@ -95,7 +96,10 @@ def make_dataset(
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)
-        hourly_data: pd.DataFrame = meteostat.hourly(country_station_data, start, end).fetch()
+        hourly_data = meteostat.hourly(country_station_data, start, end).fetch()
+
+    if hourly_data is None or hourly_data.empty:
+        return country_station_data.iloc[0:0]  # empty DataFrame with same columns
 
     station_counts = hourly_data.groupby(level="station")["pres"].count()
     min_required = len(pd.date_range(start, end, freq="h")) * 0.5
@@ -103,11 +107,10 @@ def make_dataset(
     hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
 
     # Prepare args for parallel processing
+    process = partial(_process_station, country_code=country_code)
     station_groups = list(hourly_data.groupby(level="station"))
     with ThreadPoolExecutor(max_workers=4) as executor:
-        av_frac_var = list(
-            executor.map(_process_station, [(s, df, country_code) for s, df in station_groups])
-        )
+        av_frac_var = list(executor.map(process, station_groups))
 
     # Add fractional variation to dataframe and drop NaNs
     country_station_data = country_station_data[country_station_data.index.isin(valid_stations)]

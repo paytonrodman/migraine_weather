@@ -45,7 +45,7 @@ def test_process_station_low_completeness():
     df["station"] = "TEST01"
     df = df.set_index("station", append=True)
 
-    result = data_acquisition._process_station(("TEST01", df, "TS"))
+    result = data_acquisition._process_station(("TEST01", df), "TS")
 
     # Should return NaN due to low completeness
     assert pd.isna(result)
@@ -76,7 +76,7 @@ def test_process_station_underreported_days():
     df["station"] = "TEST02"
     df = df.set_index("station", append=True)
 
-    result = data_acquisition._process_station(("TEST02", df, "TS"))
+    result = data_acquisition._process_station(("TEST02", df), "TS")
 
     # Should return NaN due to >50% underreported days
     assert pd.isna(result)
