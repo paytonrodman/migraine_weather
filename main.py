@@ -19,6 +19,11 @@ from migraine_weather.utils import get_country_codes
 meteostat.config.block_large_requests = False
 
 
+def _init_worker():
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.getLogger("meteostat").setLevel(logging.WARNING)
+
+
 def process_country(
     country_code: str,
     all_eligible_stations: pd.DataFrame,
@@ -71,7 +76,7 @@ def main(
         end=end,
         daily_output_path=daily_output_path,
     )
-    with ProcessPoolExecutor(max_workers=mp.cpu_count()) as executor:
+    with ProcessPoolExecutor(max_workers=mp.cpu_count(), initializer=_init_worker) as executor:
         futures = executor.map(process_func, country_codes)
         try:
             for _ in futures:
