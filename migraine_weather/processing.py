@@ -6,6 +6,21 @@ import pandas as pd
 from pandas import DatetimeIndex
 
 
+def get_daily_pressure_range(dataframe: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calculate daily min/max pressure after removing outliers.
+
+    Returns:
+        pd.DataFrame with columns: date, pres_min, pres_max
+    """
+    cleaned = remove_outliers(dataframe)  # Remove days with outliers from dataset
+
+    daily = cleaned["pres"].groupby(pd.Grouper(freq="D")).agg(["min", "max"])
+    daily.columns = ["pres_min", "pres_max"]
+    daily.index.name = "date"
+    return daily.reset_index()
+
+
 def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     """
     Processes a dataframe df to remove days with outlier measurements in pressure.
@@ -34,30 +49,25 @@ def remove_outliers(dataframe: pd.DataFrame) -> pd.DataFrame:
     return dataframe[~mask]
 
 
-def get_variation_frac(dataframe: pd.DataFrame) -> float:
+def compute_frac_var(daily_df: pd.DataFrame, thresh: float = 10.0) -> float:
     """
     Calculates the number of days with high pressure variation.
 
     Args:
-        pd.DataFrame dataframe: A pandas dataframe of a single station. Should contain a column 'pres'
+        pd.DataFrame daily_df: A pandas dataframe of a single station. Should contain a column 'pres'
+        thresh: pressure change threshold in hPa
 
     Returns:
         float fdays_yearly: The fraction of days per year with high pres variation.
     """
-    thresh = 10.0
-    pres = dataframe["pres"]
+    daily_df = daily_df.copy()
+    daily_df["high"] = (daily_df["pres_max"] - daily_df["pres_min"]) >= thresh
 
-    # Identify which days have pressure variation > threshold
-    daily = pres.groupby(pd.Grouper(freq="D")).agg(["max", "min"])
-    daily["high"] = (daily["max"] - daily["min"]) >= thresh
-
-    # Count number of days per year exceeding threshold, dropping empty years
-    yearly = daily.groupby(pd.Grouper(freq="YE"))["high"].agg(["sum", "count"])
+    # Group by year
+    daily_df["year"] = pd.to_datetime(daily_df["date"]).dt.year
+    yearly = daily_df.groupby("year")["high"].agg(["sum", "count"])
     yearly = yearly[yearly["count"] > 0]
     if yearly.empty:
         return float("nan")
 
-    # Average number of days per year
-    frac_var_yearly = (yearly["sum"] / yearly["count"]).mean()
-
-    return float(frac_var_yearly)
+    return float((yearly["sum"] / yearly["count"]).mean())

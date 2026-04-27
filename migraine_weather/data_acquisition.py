@@ -18,9 +18,7 @@ from . import processing
 def _process_station(args: tuple[str, pd.DataFrame], country_code: str):
     """Worker function to process a single station."""
     station, station_df = args
-
-    # Re-index to date only
-    station_df = station_df.reset_index(["station"])
+    station_df = station_df.reset_index(["station"])  # Re-index to date only
 
     # Calculate completeness
     na_mask = station_df["pres"].isna()
@@ -32,16 +30,14 @@ def _process_station(args: tuple[str, pd.DataFrame], country_code: str):
 
     if completeness < 0.5:
         logging.warning("Completeness below 50%% for station %s, %s.", station, country_code)
-        return float("nan")
+        return None
     if underreported_days > 0.5:
         logging.warning(
             "More than 50%% underreported days for station %s, %s.", station, country_code
         )
-        return float("nan")
+        return None
 
-    # Remove days with outliers from dataset
-    cleaned_df = processing.remove_outliers(station_df)
-    return processing.get_variation_frac(cleaned_df)
+    return processing.get_daily_pressure_range(station_df)
 
 
 @functools.lru_cache(maxsize=1)
@@ -76,7 +72,7 @@ def get_eligible_stations(start: datetime, end: datetime) -> pd.DataFrame:
 
 def make_dataset(
     country_code: str, country_station_data: pd.DataFrame, start: datetime, end: datetime
-) -> pd.DataFrame:
+) -> dict[str, pd.DataFrame]:
     """
     Generate a cleaned dataset with yearly fractional variation in pressure.
 
@@ -93,30 +89,30 @@ def make_dataset(
     n_stations: int = len(country_station_data)
     if not n_stations:
         logging.warning("No suitable stations available for country code %s.", country_code)
+        return {}
 
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=FutureWarning)
         hourly_data = meteostat.hourly(country_station_data, start, end).fetch()
 
     if hourly_data is None or hourly_data.empty:
-        return country_station_data.iloc[0:0]  # empty DataFrame with same columns
+        return {}
 
     station_counts = hourly_data.groupby(level="station")["pres"].count()
     min_required = len(pd.date_range(start, end, freq="h")) * 0.5
     valid_stations = station_counts[station_counts.gt(min_required)].index
     hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
 
-    # Prepare args for parallel processing
+    # Process stations in parallel
     process = partial(_process_station, country_code=country_code)
     station_groups = list(hourly_data.groupby(level="station"))
     with ThreadPoolExecutor(max_workers=4) as executor:
-        av_frac_var = list(executor.map(process, station_groups))
+        daily_results = list(executor.map(process, station_groups))
 
-    # Add fractional variation to dataframe and drop NaNs
-    country_station_data = country_station_data[country_station_data.index.isin(valid_stations)]
-    country_station_data.insert(0, "frac_var", av_frac_var)
+    # Build dict of station_id -> daily DataFrame
+    result = {}
+    for (station_id, _), daily_df in zip(station_groups, daily_results):
+        if daily_df is not None and not daily_df.empty:
+            result[station_id] = daily_df
 
-    country_station_data = country_station_data.drop(
-        country_station_data[country_station_data["frac_var"].isna()].index
-    )
-    return country_station_data
+    return result
