@@ -44,20 +44,20 @@ def process_country(
         return
 
     # Skip if all stations already have data
-    missing = [
+    to_update = [
         s for s in country_stations.index if not (daily_output_path / f"{s}.parquet").exists()
     ]
-    if not missing:
+    if not to_update:
         logging.debug(
             "All stations for %s (%s) already processed, skipping.", country_name, country_code
         )
         return
 
     logging.info(
-        "Processing %s (%s) (%d/%d stations missing)...",
+        "Processing %s (%s) (%d/%d stations to update)...",
         country_name,
         country_code,
-        len(missing),
+        len(to_update),
         len(country_stations),
     )
     station_daily_data = data_acquisition.make_dataset(country_code, country_stations, start, end)
