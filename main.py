@@ -36,7 +36,7 @@ def process_country(
         return None
 
     logging.info("Generating dataset for %s...", country_code)
-    eligible = data_acquisition.get_eligible_stations("hourly", start, end)
+    eligible = data_acquisition.get_eligible_stations(start, end)
     country_stations = eligible[eligible["country"].startswith(country_code)]
 
     if country_stations.empty:
@@ -57,7 +57,7 @@ def main(
     # Date range to analyse
     start = datetime(2010, 1, 1, 0, 0, 0)
     end = datetime(2020, 12, 31, 23, 59, 59)
-    all_eligible_stations = data_acquisition.get_eligible_stations("hourly", start, end)
+    all_eligible_stations = data_acquisition.get_eligible_stations(start, end)
 
     # Process countries in parallel
     country_codes = get_country_codes()

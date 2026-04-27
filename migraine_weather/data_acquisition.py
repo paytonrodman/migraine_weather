@@ -44,7 +44,7 @@ def _process_station(args):
 
 
 @functools.lru_cache(maxsize=1)
-def get_eligible_stations(freq: str, start: datetime, end: datetime) -> pd.DataFrame:
+def get_eligible_stations(start: datetime, end: datetime) -> pd.DataFrame:
     """
     Fetch all weather stations with data available for the specified frequency and time range.
 
@@ -57,10 +57,20 @@ def get_eligible_stations(freq: str, start: datetime, end: datetime) -> pd.DataF
         pd.DataFrame eligible_stations: A pandas dataframe object with all
             eligible stations.
     """
-    eligible_stations: pd.DataFrame = (
-        meteostat.Stations().inventory(freq.lower(), (start, end)).fetch()
-    )  # get all stations with right hourly data, worldwide
-    return eligible_stations
+    return meteostat.stations.query(
+        """
+          SELECT DISTINCT s.id, n.name, s.country, s.region,
+                 s.latitude, s.longitude, s.elevation, s.timezone
+          FROM stations s
+          INNER JOIN names n ON s.id = n.station AND n.language = 'en'
+          INNER JOIN inventory i ON s.id = i.station
+          WHERE i.parameter = 'pres'
+            AND i.start <= :end
+            AND i.end >= :start
+          """,
+        index_col="id",
+        params={"start": start.strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d")},
+    )
 
 
 def make_dataset(
