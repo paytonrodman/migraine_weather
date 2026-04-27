@@ -3,6 +3,7 @@ Tests for data_acquisition.py
 """
 
 from unittest.mock import Mock, patch
+from datetime import datetime
 import pandas as pd
 
 from migraine_weather import processing, data_acquisition
@@ -35,117 +36,98 @@ def test_get_variation_frac(test_data):
 
 def test_process_station_low_completeness():
     """
-    Test that _process_station returns NaN for stations with <50% completeness.
+    Test that _process_station returns None for stations with <50% completeness.
     """
-    # Create data with 60% missing values (40% completeness)
     dates = pd.date_range("2020-01-01", periods=100, freq="h")
     pressures = [1013.0] * 40 + [None] * 60
+    mock_df = pd.DataFrame({"pres": pressures}, index=dates)
 
-    df = pd.DataFrame({"pres": pressures}, index=dates)
-    df.index.name = "time"
-    df["station"] = "TEST01"
-    df = df.set_index("station", append=True)
+    start = datetime(2020, 1, 1)
+    end = datetime(2020, 1, 5)
 
-    result = data_acquisition._process_station(("TEST01", df), "TS")
+    with patch("migraine_weather.data_acquisition.meteostat.hourly") as mock_hourly_fn:
+        mock_ts = Mock()
+        mock_ts.fetch.return_value = mock_df
+        mock_hourly_fn.return_value = mock_ts
 
-    # Should return None due to low completeness
+        result = data_acquisition._process_station(("TEST01", Mock()), "TS", start, end)
+
     assert result is None
 
 
 def test_process_station_underreported_days():
     """
-    Test that _process_station returns NaN for stations with >50% underreported days.
+    Test that _process_station returns None for stations with >50% underreported days.
     """
-    # Create 10 days where most days have <6 hourly readings
     dates = []
     pressures = []
 
-    # 7 days with only 3 readings each (underreported)
     for day in range(7):
         day_dates = pd.date_range(f"2020-01-{day + 1:02d}", periods=3, freq="h")
         dates.extend(day_dates)
         pressures.extend([1013.0] * 3)
 
-    # 3 days with full 24 readings (properly reported)
     for day in range(7, 10):
         day_dates = pd.date_range(f"2020-01-{day + 1:02d}", periods=24, freq="h")
         dates.extend(day_dates)
         pressures.extend([1013.0] * 24)
 
-    df = pd.DataFrame({"pres": pressures}, index=dates)
-    df.index.name = "time"
-    df["station"] = "TEST02"
-    df = df.set_index("station", append=True)
+    mock_df = pd.DataFrame({"pres": pressures}, index=dates)
 
-    result = data_acquisition._process_station(("TEST02", df), "TS")
+    start = datetime(2020, 1, 1)
+    end = datetime(2020, 1, 10)
 
-    # Should return None due to >50% underreported days
+    with patch("migraine_weather.data_acquisition.meteostat.hourly") as mock_hourly_fn:
+        mock_ts = Mock()
+        mock_ts.fetch.return_value = mock_df
+        mock_hourly_fn.return_value = mock_ts
+
+        result = data_acquisition._process_station(("TEST02", Mock()), "TS", start, end)
+
     assert result is None
 
 
 def test_make_dataset_filters_invalid_stations():
     """
-    Test that make_dataset filters out stations with insufficient data early.
+    Test that make_dataset excludes stations where _process_station returns None.
     """
-    # Create mock station data
     station_data = pd.DataFrame(
         {"name": ["Station1", "Station2"], "latitude": [0.0, 1.0], "longitude": [0.0, 1.0]},
         index=["ST001", "ST002"],
     )
 
-    # Mock hourly data where ST001 has enough data, ST002 doesn't
-    mock_hourly = pd.DataFrame({"pres": [1013.0] * 100 + [1013.0] * 10})
-    mock_hourly["station"] = ["ST001"] * 100 + ["ST002"] * 10
-    mock_hourly.index = pd.date_range("2020-01-01", periods=110, freq="h")
-    mock_hourly = mock_hourly.set_index("station", append=True)
+    daily_df = pd.DataFrame({"date": pd.date_range("2020-01-01", periods=5), "pres_min": [1010.0] * 5, "pres_max": [1015.0] * 5})
 
-    start = pd.Timestamp("2020-01-01")
-    end = pd.Timestamp("2020-01-05")
+    def mock_process(args, country_code, start, end):
+        station_id, _ = args
+        return ("ST001", daily_df) if station_id == "ST001" else None
 
-    with patch("migraine_weather.data_acquisition.meteostat.hourly") as mock_hourly_fn:
-        mock_ts = Mock()
-        mock_ts.fetch.return_value = mock_hourly
-        mock_hourly_fn.return_value = mock_ts
+    with patch("migraine_weather.data_acquisition._process_station", side_effect=mock_process):
+        result = data_acquisition.make_dataset("TS", station_data, datetime(2020, 1, 1), datetime(2020, 1, 5))
 
-        result = data_acquisition.make_dataset("TS", station_data, start, end)
-
-        # ST002 should be filtered out (only 10 readings < 50% of time range)
-        assert "ST002" not in result
-        # ST001 should remain
-        assert "ST001" in result
+    assert "ST002" not in result
+    assert "ST001" in result
 
 
 def test_make_dataset_success():
     """
-    Test that make_dataset works correctly with valid station data.
+    Test that make_dataset returns a dict of station_id -> daily DataFrame.
     """
-    # Create mock station data
     station_data = pd.DataFrame(
         {"name": ["Station1"], "latitude": [0.0], "longitude": [0.0]}, index=["ST001"]
     )
 
-    # Create mock hourly data with sufficient coverage
-    dates = pd.date_range("2020-01-01", periods=365 * 24, freq="h")
-    mock_hourly = pd.DataFrame({"pres": [1013.0] * len(dates)})
-    mock_hourly["station"] = "ST001"
-    mock_hourly.index = dates
-    mock_hourly = mock_hourly.set_index("station", append=True)
+    daily_df = pd.DataFrame({
+        "date": pd.date_range("2020-01-01", periods=365),
+        "pres_min": [1010.0] * 365,
+        "pres_max": [1015.0] * 365,
+    })
 
-    start = pd.Timestamp("2020-01-01")
-    end = pd.Timestamp("2020-12-31")
+    with patch("migraine_weather.data_acquisition._process_station", return_value=("ST001", daily_df)):
+        result = data_acquisition.make_dataset("TS", station_data, datetime(2020, 1, 1), datetime(2020, 12, 31))
 
-    with patch("migraine_weather.data_acquisition.meteostat.hourly") as mock_hourly_fn:
-        mock_ts = Mock()
-        mock_ts.fetch.return_value = mock_hourly
-        mock_hourly_fn.return_value = mock_ts
-
-        result = data_acquisition.make_dataset("TS", station_data, start, end)
-
-        # Station should be in result dict
-        assert "ST001" in result
-        # Value should be a DataFrame with daily min/max columns
-        daily_df = result["ST001"]
-        assert isinstance(daily_df, pd.DataFrame)
-        assert "pres_min" in daily_df.columns
-        assert "pres_max" in daily_df.columns
-        assert "date" in daily_df.columns
+    assert "ST001" in result
+    assert isinstance(result["ST001"], pd.DataFrame)
+    assert "pres_min" in result["ST001"].columns
+    assert "pres_max" in result["ST001"].columns
+    assert "date" in result["ST001"].columns
