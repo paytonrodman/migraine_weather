@@ -15,14 +15,24 @@ import pandas as pd
 from . import processing
 
 
-def _process_station(args: tuple[str, pd.DataFrame], country_code: str):
-    """Worker function to process a single station."""
-    station, station_df = args
-    logging.debug("Processing station %s, %s.", station, country_code)
+def _process_station(
+    args: tuple[str, pd.Series],
+    country_code: str,
+    start: datetime,
+    end: datetime,
+) -> tuple[str, pd.DataFrame] | None:
+    """Fetch and process a single station."""
+    station_id, station_meta = args
+    logging.debug("Processing station %s, %s.", station_id, country_code)
 
-    station_df = station_df.reset_index(["station"])  # Re-index to date only
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=FutureWarning)
+        station_df = meteostat.hourly(station_id, start, end).fetch()
 
-    # Calculate completeness
+    if station_df is None or station_df.empty:
+        return None
+
+    # Check completeness
     na_mask = station_df["pres"].isna()
     completeness = 1 - na_mask.sum() / len(na_mask)
     day_complete = (
@@ -31,15 +41,16 @@ def _process_station(args: tuple[str, pd.DataFrame], country_code: str):
     underreported_days = sum(day_complete[day_complete.index < 6])
 
     if completeness < 0.5:
-        logging.warning("Completeness below 50%% for station %s, %s.", station, country_code)
+        logging.warning("Completeness below 50%% for station %s, %s.", station_id, country_code)
         return None
     if underreported_days > 0.5:
         logging.warning(
-            "More than 50%% underreported days for station %s, %s.", station, country_code
+            "More than 50%% underreported days for station %s, %s.", station_id, country_code
         )
         return None
 
-    return processing.get_daily_pressure_range(station_df)
+    daily_df = processing.get_daily_pressure_range(station_df)
+    return (station_id, daily_df)
 
 
 @functools.lru_cache(maxsize=1)
@@ -76,59 +87,31 @@ def make_dataset(
     country_code: str, country_station_data: pd.DataFrame, start: datetime, end: datetime
 ) -> dict[str, pd.DataFrame]:
     """
-    Generate a cleaned dataset with yearly fractional variation in pressure.
+    Fetch and process hourly pressure data per station, returning daily min/max.
 
     Args:
-        string country_code: An ISO 2 country code.
-        pd.DataFrame country_data: A pandas dataframe containing eligible station information.
-        datetime start: A datetime object. The start datetime for data analysis
-        datetime end: A datetime object. The end datetime for data analysis
+        country_code: ISO 2 country code.
+        country_station_data: DataFrame of eligible stations.
+        start: Start datetime for data analysis.
+        end: End datetime for data analysis.
 
     Returns:
-        pd.DataFrame stations: A pandas DataFrame with added frac_var column
+        dict mapping station_id -> DataFrame(date, pres_min, pres_max)
     """
-
-    n_stations: int = len(country_station_data)
-    if not n_stations:
+    if len(country_station_data) == 0:
         logging.warning("No suitable stations available for country code %s.", country_code)
         return {}
 
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning)
-        hourly_data = meteostat.hourly(country_station_data, start, end).fetch()
+    process = partial(_process_station, country_code=country_code, start=start, end=end)
+    station_items = list(country_station_data.iterrows())
 
-    if hourly_data is None or hourly_data.empty:
-        return {}
-
-    station_counts = hourly_data.groupby(level="station")["pres"].count()
-    min_required = len(pd.date_range(start, end, freq="h")) * 0.5
-    valid_stations = station_counts[station_counts.gt(min_required)].index
-
-    if n_filtered := (len(station_counts) - len(valid_stations)):
-        logging.debug(
-            "Filtered %d/%d stations in %s with insufficient pressure data.",
-            n_filtered,
-            len(station_counts),
-            country_code,
-        )
-    hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
-
-    # Process stations in parallel
-    process = partial(_process_station, country_code=country_code)
-    station_groups = list(hourly_data.groupby(level="station"))
     with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = executor.map(process, station_groups)
+        futures = executor.map(process, station_items)
         try:
-            daily_results = list(futures)
+            results = list(futures)
         except KeyboardInterrupt:
             logging.info("Interrupted during station processing for %s.", country_code)
             executor.shutdown(wait=False, cancel_futures=True)
             raise
 
-    # Build dict of station_id -> daily DataFrame
-    result = {}
-    for (station_id, _), daily_df in zip(station_groups, daily_results):
-        if daily_df is not None and not daily_df.empty:
-            result[station_id] = daily_df
-
-    return result
+    return {station_id: daily_df for r in results if r is not None for station_id, daily_df in [r]}
