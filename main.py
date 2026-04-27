@@ -9,6 +9,7 @@ from functools import partial
 import pandas as pd
 import typer
 import pycountry
+from typing import Optional
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
@@ -74,14 +75,13 @@ def main(
     daily_output_path: Path = Path(DATA_DIR.format(project_root=".") + "/daily"),
     max_workers: int = max(1, mp.cpu_count() - 2),
     start_date: datetime = datetime(2010, 1, 1),
-    end_date: datetime = datetime.now(),
+    end_date: Optional[datetime] = None,
 ):
+    end_date = end_date or datetime.now()
     daily_output_path.mkdir(exist_ok=True)
 
-    start = start_date
-    end = end_date
-    logging.info("Fetching eligible stations for %s to %s...", start.date(), end.date())
-    all_eligible_stations = data_acquisition.get_eligible_stations(start, end)
+    logging.info("Fetching eligible stations for %s to %s...", start_date.date(), end_date.date())
+    all_eligible_stations = data_acquisition.get_eligible_stations(start_date, end_date)
     logging.info(
         "Found %d eligible stations across %d countries.",
         len(all_eligible_stations),
@@ -94,8 +94,8 @@ def main(
     process_func = partial(
         process_country,
         all_eligible_stations=all_eligible_stations,
-        start=start,
-        end=end,
+        start=start_date,
+        end=end_date,
         daily_output_path=daily_output_path,
     )
     with ProcessPoolExecutor(max_workers=max_workers, initializer=_init_worker) as executor:
