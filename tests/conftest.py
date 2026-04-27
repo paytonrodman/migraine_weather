@@ -9,22 +9,25 @@ def test_stations():
     """
     Provides test station data for a single country (Australia, AU).
     """
-    au_stations = meteostat.Stations().region("AU").fetch()
+    au_stations = meteostat.stations.query(
+        "SELECT id, name, country, region, latitude, longitude, elevation, timezone "
+        "FROM stations INNER JOIN names ON stations.id = names.station AND names.language = 'en' "
+        "WHERE country = 'AU'",
+        index_col="id",
+    )
 
     return au_stations
 
 
 @pytest.fixture
-def test_data(test_stations, test_time):
+def test_data(test_stations):
     """
     Provides test weather data for a single station (Canberra).
     """
-    start, end = test_time
     station_id = test_stations.loc[test_stations["name"] == "Canberra"].index.item()
-
-    hourly = meteostat.Hourly(station_id, start, end).fetch()
-
-    return hourly
+    start = datetime(2020, 1, 1)
+    end = datetime(2020, 12, 31, 23, 59, 59)
+    return meteostat.hourly(station_id, start, end).fetch()
 
 
 @pytest.fixture

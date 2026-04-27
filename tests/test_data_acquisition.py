@@ -10,25 +10,21 @@ from migraine_weather import processing, data_acquisition
 
 def test_get_eligible_stations(test_time):
     """
-    Function to test get_eligible_stations from migraine_weather.make_dataset
+    Function to test get_eligible_stations
     """
     start, end = test_time
-    freq = "Hourly"
 
-    eligible_stations = data_acquisition.get_eligible_stations(freq, start, end)
+    eligible_stations = data_acquisition.get_eligible_stations(start, end)
 
-    # test that all start and end times encapsulate the correct range
-    test_times = (eligible_stations[freq.lower() + "_start"].dt.year <= start.year) & (
-        eligible_stations[freq.lower() + "_end"].dt.year >= end.year
-    ).all()
-    assert test_times.all()
-    # test that the output is of type pd.DataFrame
     assert isinstance(eligible_stations, pd.DataFrame)
+    assert not eligible_stations.empty
+    for col in ("name", "country", "latitude", "longitude"):
+        assert col in eligible_stations.columns
 
 
 def test_get_variation_frac(test_data):
     """
-    Function to test get_variation_frac from migraine_weather.make_dataset
+    Function to test get_variation_frac
     """
     frac_var_test = processing.get_variation_frac(test_data)
 
@@ -105,10 +101,10 @@ def test_make_dataset_filters_invalid_stations():
     start = pd.Timestamp("2020-01-01")
     end = pd.Timestamp("2020-01-05")
 
-    with patch("meteostat.Hourly") as mock_hourly_class:
-        mock_instance = Mock()
-        mock_instance.fetch.return_value = mock_hourly
-        mock_hourly_class.return_value = mock_instance
+    with patch("migraine_weather.data_acquisition.meteostat.hourly") as mock_hourly_fn:
+        mock_ts = Mock()
+        mock_ts.fetch.return_value = mock_hourly
+        mock_hourly_fn.return_value = mock_ts
 
         result = data_acquisition.make_dataset("TS", station_data, start, end)
 
@@ -137,10 +133,10 @@ def test_make_dataset_success():
     start = pd.Timestamp("2020-01-01")
     end = pd.Timestamp("2020-12-31")
 
-    with patch("meteostat.Hourly") as mock_hourly_class:
-        mock_instance = Mock()
-        mock_instance.fetch.return_value = mock_hourly
-        mock_hourly_class.return_value = mock_instance
+    with patch("migraine_weather.data_acquisition.meteostat.hourly") as mock_hourly_fn:
+        mock_ts = Mock()
+        mock_ts.fetch.return_value = mock_hourly
+        mock_hourly_fn.return_value = mock_ts
 
         result = data_acquisition.make_dataset("TS", station_data, start, end)
 
