@@ -52,10 +52,10 @@ def _process_station(
     underreported_days = sum(day_complete[day_complete.index < 6])
 
     if completeness < 0.5:
-        logging.warning("Completeness below 50%% for station %s, %s.", station_id, country_code)
+        logging.debug("Completeness below 50%% for station %s, %s.", station_id, country_code)
         return None
     if underreported_days > 0.5:
-        logging.warning(
+        logging.debug(
             "More than 50%% underreported days for station %s, %s.", station_id, country_code
         )
         return None
