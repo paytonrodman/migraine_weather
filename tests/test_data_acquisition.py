@@ -24,9 +24,10 @@ def test_get_eligible_stations(test_time):
 
 def test_get_variation_frac(test_data):
     """
-    Function to test get_variation_frac
+    Function to test compute_frac_var
     """
-    frac_var_test = processing.get_variation_frac(test_data)
+    daily = processing.get_daily_pressure_range(test_data)
+    frac_var_test = processing.compute_frac_var(daily)
 
     # test that output is of type float
     assert isinstance(frac_var_test, float)
@@ -47,8 +48,8 @@ def test_process_station_low_completeness():
 
     result = data_acquisition._process_station(("TEST01", df), "TS")
 
-    # Should return NaN due to low completeness
-    assert pd.isna(result)
+    # Should return None due to low completeness
+    assert result is None
 
 
 def test_process_station_underreported_days():
@@ -78,8 +79,8 @@ def test_process_station_underreported_days():
 
     result = data_acquisition._process_station(("TEST02", df), "TS")
 
-    # Should return NaN due to >50% underreported days
-    assert pd.isna(result)
+    # Should return None due to >50% underreported days
+    assert result is None
 
 
 def test_make_dataset_filters_invalid_stations():
@@ -109,9 +110,9 @@ def test_make_dataset_filters_invalid_stations():
         result = data_acquisition.make_dataset("TS", station_data, start, end)
 
         # ST002 should be filtered out (only 10 readings < 50% of time range)
-        assert "ST002" not in result.index
+        assert "ST002" not in result
         # ST001 should remain
-        assert "ST001" in result.index
+        assert "ST001" in result
 
 
 def test_make_dataset_success():
@@ -140,11 +141,11 @@ def test_make_dataset_success():
 
         result = data_acquisition.make_dataset("TS", station_data, start, end)
 
-        # Station should be in result
-        assert "ST001" in result.index
-        # Should have frac_var column as first column
-        assert "frac_var" in result.columns
-        assert result.columns[0] == "frac_var"
-        # Should have a valid float value
-        assert isinstance(result.loc["ST001", "frac_var"], float)
-        assert not pd.isna(result.loc["ST001", "frac_var"])
+        # Station should be in result dict
+        assert "ST001" in result
+        # Value should be a DataFrame with daily min/max columns
+        daily_df = result["ST001"]
+        assert isinstance(daily_df, pd.DataFrame)
+        assert "pres_min" in daily_df.columns
+        assert "pres_max" in daily_df.columns
+        assert "date" in daily_df.columns

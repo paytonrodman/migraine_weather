@@ -23,11 +23,12 @@ def test_remove_outliers(test_data: pd.DataFrame):
     assert isinstance(cleaned_data, pd.DataFrame)
 
 
-def test_get_variation_frac(test_data: pd.DataFrame):
+def test_compute_frac_var(test_data: pd.DataFrame):
     """
-    Function to test get_variation_frac from migraine_weather.processing
+    Function to test compute_frac_var from migraine_weather.processing
     """
-    frac_var_test = processing.get_variation_frac(test_data)
+    daily = processing.get_daily_pressure_range(test_data)
+    frac_var_test = processing.compute_frac_var(daily)
 
     # test that output is of type float
     assert isinstance(frac_var_test, float)
@@ -58,33 +59,33 @@ def test_remove_outliers_removes_outliers():
     assert "2020-01-03" in cleaned_dates
 
 
-def test_get_variation_frac_calculation():
+def test_compute_frac_var_calculation():
     """
-    Test that get_variation_frac correctly calculates fraction of high variation days.
+    Test that compute_frac_var correctly calculates fraction of high variation days.
     """
-    # Create 2 years of daily data
-    # Year 1: 10 days with high variation (>10 hPa), 355 days low variation
-    # Year 2: 20 days with high variation, 345 days low variation
-    dates_y1 = pd.date_range("2020-01-01", periods=365 * 24, freq="h")
-    dates_y2 = pd.date_range("2021-01-01", periods=365 * 24, freq="h")
+    # Build daily min/max directly: 2 years
+    # Year 1: 10 high-variation days, Year 2: 20 high-variation days
+    dates_y1 = pd.date_range("2020-01-01", periods=365, freq="D")
+    dates_y2 = pd.date_range("2021-01-01", periods=365, freq="D")
 
-    pressures_y1 = [1013.0] * (365 * 24)
-    pressures_y2 = [1013.0] * (365 * 24)
+    pres_min = [1013.0] * 730
+    pres_max = [1013.0] * 730
 
-    # Add high variation days (>10 hPa range within day)
-    # Year 1: 10 days
-    for day in range(10):
-        pressures_y1[day * 24] = 1000.0
-        pressures_y1[day * 24 + 12] = 1015.0  # 15 hPa variation
+    for day in range(10):  # Year 1: 10 high-variation days
+        pres_min[day] = 1000.0
+        pres_max[day] = 1015.0  # 15 hPa range
 
-    # Year 2: 20 days
-    for day in range(20):
-        pressures_y2[day * 24] = 1000.0
-        pressures_y2[day * 24 + 12] = 1015.0  # 15 hPa variation
+    for day in range(20):  # Year 2: 20 high-variation days
+        pres_min[365 + day] = 1000.0
+        pres_max[365 + day] = 1015.0
 
-    df = pd.DataFrame({"pres": pressures_y1 + pressures_y2}, index=dates_y1.append(dates_y2))
+    daily_df = pd.DataFrame({
+        "date": list(dates_y1) + list(dates_y2),
+        "pres_min": pres_min,
+        "pres_max": pres_max,
+    })
 
-    frac_var = processing.get_variation_frac(df)
+    frac_var = processing.compute_frac_var(daily_df)
 
     # Expected: (10/365 + 20/365) / 2 ≈ 0.041
     assert 0.035 < frac_var < 0.045
