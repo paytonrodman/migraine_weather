@@ -11,9 +11,12 @@ import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
 
+import meteostat
 from migraine_weather import data_acquisition
 from migraine_weather.consts import DATA_DIR, RAW_DATA_DIR, INTERIM_DATA_DIR, PROCESSED_DATA_DIR
 from migraine_weather.utils import compile_data, get_country_codes
+
+meteostat.config.block_large_requests = False
 
 
 def process_country(
