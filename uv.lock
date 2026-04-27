@@ -563,14 +563,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "cartopy", specifier = ">=0.25.0" },
-    { name = "datetime", specifier = ">=5.5" },
-    { name = "logging", specifier = ">=0.4.9.6" },
-    { name = "matplotlib", specifier = ">=3.10.6" },
-    { name = "meteostat", specifier = ">=1.7.4" },
-    { name = "numpy", specifier = ">=1.26" },
-    { name = "pandas", specifier = ">=2.2.0" },
-    { name = "pycountry", specifier = ">=24.6.1" },
+    { name = "cartopy", specifier = "~=0.25.0" },
+    { name = "datetime", specifier = "~=5.5" },
+    { name = "logging", specifier = "~=0.4.9.6" },
+    { name = "matplotlib", specifier = "~=3.10.6" },
+    { name = "meteostat", specifier = "~=1.7.4" },
+    { name = "numpy", specifier = "~=1.26" },
+    { name = "pandas", specifier = "~=2.2.0" },
+    { name = "pycountry", specifier = "~=24.6.1" },
 ]
 
 [package.metadata.requires-dev]
