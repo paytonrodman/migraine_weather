@@ -7,6 +7,8 @@ from pathlib import Path
 from datetime import datetime
 from functools import partial
 import pandas as pd
+import typer
+
 
 from concurrent.futures import ProcessPoolExecutor
 import multiprocessing as mp
@@ -17,6 +19,7 @@ from migraine_weather.consts import DATA_DIR
 from migraine_weather.utils import get_country_codes
 
 meteostat.config.block_large_requests = False
+app = typer.Typer()
 
 
 def _init_worker():
@@ -54,14 +57,17 @@ def process_country(
     logging.info("Saved %d stations for %s.", len(station_daily_data), country_code)
 
 
+@app.command()
 def main(
     daily_output_path: Path = Path(DATA_DIR.format(project_root=".") + "/daily"),
+    max_workers: int = max(1, mp.cpu_count() - 2),
+    start_date: datetime = datetime(2010, 1, 1),
+    end_date: datetime = datetime.now(),
 ):
     daily_output_path.mkdir(exist_ok=True)
 
-    # Date range to analyse
-    start = datetime(2010, 1, 1, 0, 0, 0)
-    end = datetime.now()
+    start = start_date
+    end = end_date
     logging.info("Fetching eligible stations for %s to %s...", start.date(), end.date())
     all_eligible_stations = data_acquisition.get_eligible_stations(start, end)
     logging.info("Found %d eligible stations across %d countries.", len(all_eligible_stations), all_eligible_stations["country"].nunique())
@@ -76,7 +82,7 @@ def main(
         end=end,
         daily_output_path=daily_output_path,
     )
-    with ProcessPoolExecutor(max_workers=mp.cpu_count(), initializer=_init_worker) as executor:
+    with ProcessPoolExecutor(max_workers=max_workers, initializer=_init_worker) as executor:
         futures = executor.map(process_func, country_codes)
         try:
             for _ in futures:
@@ -91,4 +97,5 @@ def main(
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-    main()
+
+    app()
