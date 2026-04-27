@@ -29,6 +29,7 @@ def process_country(
     """Process a single country with parallel station processing."""
     country_stations = all_eligible_stations[all_eligible_stations["country"] == country_code]
     if country_stations.empty:
+        logging.debug("No eligible stations for %s, skipping.", country_code)
         return
 
     # Skip if all stations already have data
@@ -36,13 +37,16 @@ def process_country(
         s for s in country_stations.index if not (daily_output_path / f"{s}.parquet").exists()
     ]
     if not missing:
+        logging.debug("All stations for %s already processed, skipping.", country_code)
         return
 
-    logging.info("Processing %s...", country_code)
+    logging.info("Processing %s (%d/%d stations missing)...", country_code, len(missing), len(country_stations))
     station_daily_data = data_acquisition.make_dataset(country_code, country_stations, start, end)
 
     for station_id, daily_df in station_daily_data.items():
         daily_df.to_parquet(daily_output_path / f"{station_id}.parquet", index=False)
+
+    logging.info("Saved %d stations for %s.", len(station_daily_data), country_code)
 
 
 def main(
@@ -53,7 +57,9 @@ def main(
     # Date range to analyse
     start = datetime(2010, 1, 1, 0, 0, 0)
     end = datetime.now()
+    logging.info("Fetching eligible stations for %s to %s...", start.date(), end.date())
     all_eligible_stations = data_acquisition.get_eligible_stations(start, end)
+    logging.info("Found %d eligible stations across %d countries.", len(all_eligible_stations), all_eligible_stations["country"].nunique())
 
     # Process countries in parallel
     country_codes = get_country_codes()

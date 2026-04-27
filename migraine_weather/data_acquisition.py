@@ -101,6 +101,14 @@ def make_dataset(
     station_counts = hourly_data.groupby(level="station")["pres"].count()
     min_required = len(pd.date_range(start, end, freq="h")) * 0.5
     valid_stations = station_counts[station_counts.gt(min_required)].index
+
+    if n_filtered := (len(station_counts) - len(valid_stations)):
+        logging.info(
+            "Filtered %d/%d stations in %s with insufficient pressure data.",
+            n_filtered,
+            len(station_counts),
+            country_code,
+        )
     hourly_data = hourly_data[hourly_data.index.get_level_values("station").isin(valid_stations)]
 
     # Process stations in parallel
