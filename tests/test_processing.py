@@ -79,11 +79,13 @@ def test_compute_frac_var_calculation():
         pres_min[365 + day] = 1000.0
         pres_max[365 + day] = 1015.0
 
-    daily_df = pd.DataFrame({
-        "date": list(dates_y1) + list(dates_y2),
-        "pres_min": pres_min,
-        "pres_max": pres_max,
-    })
+    daily_df = pd.DataFrame(
+        {
+            "date": list(dates_y1) + list(dates_y2),
+            "pres_min": pres_min,
+            "pres_max": pres_max,
+        }
+    )
 
     frac_var = processing.compute_frac_var(daily_df)
 

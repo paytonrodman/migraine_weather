@@ -96,14 +96,22 @@ def test_make_dataset_filters_invalid_stations():
         index=["ST001", "ST002"],
     )
 
-    daily_df = pd.DataFrame({"date": pd.date_range("2020-01-01", periods=5), "pres_min": [1010.0] * 5, "pres_max": [1015.0] * 5})
+    daily_df = pd.DataFrame(
+        {
+            "date": pd.date_range("2020-01-01", periods=5),
+            "pres_min": [1010.0] * 5,
+            "pres_max": [1015.0] * 5,
+        }
+    )
 
     def mock_process(args, country_code, start, end):
         station_id, _ = args
         return ("ST001", daily_df) if station_id == "ST001" else None
 
     with patch("migraine_weather.data_acquisition._process_station", side_effect=mock_process):
-        result = data_acquisition.make_dataset("TS", station_data, datetime(2020, 1, 1), datetime(2020, 1, 5))
+        result = data_acquisition.make_dataset(
+            "TS", station_data, datetime(2020, 1, 1), datetime(2020, 1, 5)
+        )
 
     assert "ST002" not in result
     assert "ST001" in result
@@ -117,14 +125,20 @@ def test_make_dataset_success():
         {"name": ["Station1"], "latitude": [0.0], "longitude": [0.0]}, index=["ST001"]
     )
 
-    daily_df = pd.DataFrame({
-        "date": pd.date_range("2020-01-01", periods=365),
-        "pres_min": [1010.0] * 365,
-        "pres_max": [1015.0] * 365,
-    })
+    daily_df = pd.DataFrame(
+        {
+            "date": pd.date_range("2020-01-01", periods=365),
+            "pres_min": [1010.0] * 365,
+            "pres_max": [1015.0] * 365,
+        }
+    )
 
-    with patch("migraine_weather.data_acquisition._process_station", return_value=("ST001", daily_df)):
-        result = data_acquisition.make_dataset("TS", station_data, datetime(2020, 1, 1), datetime(2020, 12, 31))
+    with patch(
+        "migraine_weather.data_acquisition._process_station", return_value=("ST001", daily_df)
+    ):
+        result = data_acquisition.make_dataset(
+            "TS", station_data, datetime(2020, 1, 1), datetime(2020, 12, 31)
+        )
 
     assert "ST001" in result
     assert isinstance(result["ST001"], pd.DataFrame)

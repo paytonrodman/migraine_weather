@@ -33,7 +33,12 @@ def test_save_station_metadata():
         output_path.mkdir()
 
         stations = pd.DataFrame(
-            {"name": ["A", "B", "C"], "country": ["AU", "BE", "CA"], "latitude": [0.0, 1.0, 2.0], "longitude": [0.0, 1.0, 2.0]},
+            {
+                "name": ["A", "B", "C"],
+                "country": ["AU", "BE", "CA"],
+                "latitude": [0.0, 1.0, 2.0],
+                "longitude": [0.0, 1.0, 2.0],
+            },
             index=["ST001", "ST002", "ST003"],
         )
         stations.index.name = "id"
