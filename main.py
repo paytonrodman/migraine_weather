@@ -4,7 +4,7 @@ Main functions for processing weather data
 
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import partial
 import pandas as pd
 import typer
@@ -16,7 +16,7 @@ import multiprocessing as mp
 
 import meteostat
 from migraine_weather import data_acquisition
-from migraine_weather.consts import DATA_DIR
+from migraine_weather.consts import DATA_DIR, PROCESSED_DATA_DIR
 from migraine_weather.utils import get_country_codes, save_station_metadata
 
 meteostat.config.block_large_requests = False
@@ -35,7 +35,7 @@ def process_country(
     end: datetime,
     daily_output_path: Path,
 ):
-    """Process a single country with parallel station processing."""
+    """Process a single country, doing full fetch for new stations and incremental for existing."""
     country = pycountry.countries.get(alpha_2=country_code)
     country_name = country.name if country else country_code
     country_stations = all_eligible_stations[all_eligible_stations["country"] == country_code]
@@ -43,31 +43,41 @@ def process_country(
         logging.debug("No eligible stations for %s (%s), skipping.", country_name, country_code)
         return
 
-    # Skip if all stations already have data
-    to_update = [
-        s for s in country_stations.index if not (daily_output_path / f"{s}.parquet").exists()
+    new_stations = country_stations[
+        ~country_stations.index.map(lambda s: (daily_output_path / f"{s}.parquet").exists())
     ]
-    if not to_update:
-        logging.debug(
-            "All stations for %s (%s) already processed, skipping.", country_name, country_code
-        )
-        return
-
+    existing_stations = country_stations[~country_stations.index.isin(new_stations.index)]
     logging.info(
-        "Processing %s (%s) (%d/%d stations to update)...",
+        "Processing %s (%s): %d new, %d to update...",
         country_name,
         country_code,
-        len(to_update),
-        len(country_stations),
+        len(new_stations),
+        len(existing_stations),
     )
-    station_daily_data = data_acquisition.make_dataset(country_code, country_stations, start, end)
 
-    for station_id, daily_df in station_daily_data.items():
-        daily_df.to_parquet(daily_output_path / f"{station_id}.parquet", index=False)
+    # Full fetch for new stations
+    if not new_stations.empty:
+        for station_id, daily_df in data_acquisition.make_dataset(
+            country_code, new_stations, start, end
+        ).items():
+            daily_df.to_parquet(daily_output_path / f"{station_id}.parquet", index=False)
 
-    logging.info(
-        "Saved %d stations for %s (%s).", len(station_daily_data), country_name, country_code
-    )
+    # Incremental fetch for existing stations
+    for station_id in existing_stations.index:
+        parquet_file = daily_output_path / f"{station_id}.parquet"
+        existing = pd.read_parquet(parquet_file)
+        incremental_start = pd.to_datetime(existing["date"].max()).to_pydatetime() + timedelta(
+            days=1
+        )
+        if incremental_start >= end:
+            continue
+        station_df = existing_stations.loc[[station_id]]
+        result = data_acquisition.make_dataset(country_code, station_df, incremental_start, end)
+        if station_id in result:
+            updated = pd.concat([existing, result[station_id]], ignore_index=True)
+            updated.to_parquet(parquet_file, index=False)
+
+    logging.info("Done %s (%s).", country_name, country_code)
 
 
 @app.command()
@@ -109,7 +119,7 @@ def main(
             return
 
     logging.info("Processing dataset complete.")
-    save_station_metadata(all_eligible_stations, daily_output_path, Path("data/processed"))
+    save_station_metadata(all_eligible_stations, daily_output_path, PROCESSED_DATA_DIR)
 
 
 if __name__ == "__main__":
