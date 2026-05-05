@@ -24,10 +24,7 @@ A short writeup, plus an **interactive plot** is available on my website [here](
 │
 ├── notebooks          <- Jupyter notebooks for exploration and analysis
 │
-├── references         <- Reference materials and data dictionaries
-│
-├── reports            <- Generated analysis outputs
-│   └── figures        <- Generated map figures (per continent + world)
+├── figures            <- Generated map figures (per continent + world)
 │
 ├── tests              <- Test suite
 │   ├── conftest.py             <- Shared pytest fixtures
