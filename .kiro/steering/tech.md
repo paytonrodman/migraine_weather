@@ -1,31 +1,13 @@
 # Technology Stack
 
 ## Language & Runtime
-  - Python 3.12
-  - Package management: [uv](https://github.com/astral-sh/uv)
+- Python 3.12
+- Package management: uv
 
-## Core Dependencies
-  - **pandas** — data manipulation and analysis
-  - **numpy** — numerical operations
-  - **meteostat** — weather station data retrieval
-  - **pycountry** — country code lookups
-  - **pyarrow** — Parquet/Arrow data serialisation
-
-## Visualisation
-  - **matplotlib** — plotting
-  - **cartopy** — geographic map projections
-
-## Dev Tooling
-  - **pytest** + **pytest-cov** — testing and coverage
-  - **black** — code formatting (line length: 99)
-  - **ruff** — linting and import sorting
-  - **flake8** — additional linting
-  - **mypy** — static type checking
-  - **safety** — dependency vulnerability scanning
-
-## Build
-  - Build backend: `flit_core`
-  - Common tasks automated via `Makefile`
+## Dependencies
+- pandas, numpy, meteostat, pycountry, pyarrow
+- matplotlib, cartopy
+- pytest, black (line length: 99), ruff, flake8, mypy, safety
 
 ## Coding Style
 
